@@ -1,0 +1,159 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../../core/constants/app_colors.dart';
+import '../../../core/providers/auth_provider.dart';
+import '../widgets/crisis_hotline_sheet.dart';
+import '../widgets/mood_energy_chart.dart';
+import '../widgets/risk_badge_widget.dart';
+
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final List<double> _last7Mood = <double>[3.5, 2.8, 3.1, 2.5, 2.2, 2.7, 3.0];
+  final List<double> _last7Energy = <double>[3.8, 3.2, 2.9, 2.4, 2.0, 2.6, 2.9];
+  final List<String> _dayLabels = <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  final String _riskLevel = 'Moderate';
+  bool _hasShownCrisisSheet = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_riskLevel == 'Crisis' && !_hasShownCrisisSheet) {
+      _hasShownCrisisSheet = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        CrisisHotlineSheet.show(context);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AuthProvider auth = context.watch<AuthProvider>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Dashboard'),
+        actions: <Widget>[
+          IconButton(
+            tooltip: 'Logout',
+            onPressed: () async {
+              await context.read<AuthProvider>().logout();
+              if (!context.mounted) {
+                return;
+              }
+              context.go('/login');
+            },
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Welcome, ${auth.studentName}',
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Current Risk Level',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            RiskBadgeWidget(riskLevel: _riskLevel),
+            const SizedBox(height: 20),
+            Card(
+              color: Colors.white,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      'Last 7 Days Mood and Energy',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: const <Widget>[
+                        _LegendDot(color: AppColors.primaryRed, label: 'Mood'),
+                        SizedBox(width: 12),
+                        _LegendDot(color: Color(0xFF0288D1), label: 'Energy'),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    MoodEnergyChart(
+                      moodValues: _last7Mood,
+                      energyValues: _last7Energy,
+                      dayLabels: _dayLabels,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryRed,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () => context.go('/dass21'),
+                child: const Text('Take DASS-21'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.go('/esm'),
+                child: const Text('Daily Check-in'),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => context.go('/cssrs'),
+                child: const Text('View Results'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: <Widget>[
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label),
+      ],
+    );
+  }
+}
