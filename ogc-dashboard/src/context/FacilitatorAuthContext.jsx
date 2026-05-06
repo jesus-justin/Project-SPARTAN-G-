@@ -7,7 +7,7 @@ export function FacilitatorAuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('ogc_token'));
 
   const login = async ({ email, password }) => {
-    const response = await facilitatorLogin({ studentId: email, password });
+    const response = await facilitatorLogin({ email, password });
     const jwt = response.data?.token;
     localStorage.setItem('ogc_token', jwt);
     setToken(jwt);

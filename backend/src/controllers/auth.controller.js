@@ -114,6 +114,52 @@ export async function login(req, res, next) {
   }
 }
 
+export async function facilitatorLogin(req, res, next) {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'email and password are required' });
+    }
+
+    const result = await query(
+      `SELECT id, student_id, password_hash, first_name, last_name, year_level, role
+       FROM users
+       WHERE student_id = $1 AND role = $2`,
+      [email, 'facilitator']
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(401).json({ success: false, message: 'Invalid facilitator credentials' });
+    }
+
+    const user = result.rows[0];
+    const passwordOk = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordOk) {
+      return res.status(401).json({ success: false, message: 'Invalid facilitator credentials' });
+    }
+
+    const token = buildToken(user);
+
+    return res.json({
+      success: true,
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.student_id,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          role: user.role,
+        },
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function me(req, res, next) {
   try {
     const result = await query(

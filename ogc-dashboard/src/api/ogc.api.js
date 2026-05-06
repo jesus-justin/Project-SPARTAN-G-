@@ -1,7 +1,7 @@
 import client from './client';
 
 export async function facilitatorLogin(payload) {
-  const { data } = await client.post('/auth/login', payload);
+  const { data } = await client.post('/auth/facilitator/login', payload);
   return data;
 }
 
