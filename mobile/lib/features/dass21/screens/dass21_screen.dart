@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/api_service.dart';
+import '../../dashboard/widgets/crisis_hotline_sheet.dart';
 
 class Dass21Screen extends StatefulWidget {
   const Dass21Screen({super.key});
@@ -18,34 +20,34 @@ class _Dass21ScreenState extends State<Dass21Screen> {
     'Applied to me very much or most of the time',
   ];
 
-  static const List<String> _questions = <String>[
-    'I found it hard to wind down.',
-    'I was aware of dryness of my mouth.',
-    'I could not seem to experience any positive feeling at all.',
-    'I experienced breathing difficulty (e.g. excessively rapid breathing, breathlessness in the absence of physical exertion).',
-    'I found it difficult to work up the initiative to do things.',
-    'I tended to over-react to situations.',
-    'I experienced trembling (e.g. in the hands).',
-    'I felt that I was using a lot of nervous energy.',
-    'I was worried about situations in which I might panic and make a fool of myself.',
-    'I felt that I had nothing to look forward to.',
-    'I found myself getting agitated.',
-    'I found it difficult to relax.',
-    'I felt down-hearted and blue.',
-    'I was intolerant of anything that kept me from getting on with what I was doing.',
-    'I felt I was close to panic.',
-    'I was unable to become enthusiastic about anything.',
-    'I felt I was not worth much as a person.',
-    'I felt that I was rather touchy.',
-    'I was aware of the action of my heart in the absence of physical exertion (e.g. sense of heart rate increase, heart missing a beat).',
-    'I felt scared without any good reason.',
-    'I felt that life was meaningless.',
-  ];
+  List<String> _questions = <String>[];
 
   int _currentIndex = 0;
-  final List<int?> _answers = List<int?>.filled(21, null);
+  List<int?> _answers = List<int?>.filled(21, null);
 
   int get _answeredCount => _answers.whereType<int>().length;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    try {
+      final ApiService api = ApiService();
+      final dynamic resp = await api.get('/assessments/dass21/questions');
+      if (resp is Map<String, dynamic> && resp['data'] is List) {
+        final List<dynamic> q = resp['data'];
+        setState(() {
+          _questions = q.map((e) => e.toString()).toList();
+          _answers = List<int?>.filled(_questions.length, null);
+        });
+      }
+    } catch (_) {
+      // keep defaults
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -150,25 +152,42 @@ class _Dass21ScreenState extends State<Dass21Screen> {
     );
   }
 
-  void _submitAssessment(BuildContext context) {
-    final int score = _answers.whereType<int>().fold<int>(0, (int sum, int item) => sum + item);
-    showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('DASS-21 Submitted'),
-          content: Text('Your response has been recorded. Raw score: $score'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                context.go('/dashboard');
-              },
-              child: const Text('Return to Dashboard'),
-            ),
-          ],
+  Future<void> _submitAssessment(BuildContext context) async {
+    final List<int> answers = _answers.map((e) => e ?? 0).cast<int>().toList();
+    try {
+      final ApiService api = ApiService();
+      final dynamic resp = await api.post('/assessments/dass21', body: {'answers': answers});
+      if (!mounted) return;
+      if (resp is Map<String, dynamic> && resp['data'] != null) {
+        final String risk = resp['data']['riskLevel']?.toString() ?? resp['data']['risk_level']?.toString() ?? 'Unknown';
+        final Map<String, dynamic> scoring = resp['data']['scoring'] is Map ? Map<String, dynamic>.from(resp['data']['scoring']) : {};
+        // show result dialog
+        showDialog<void>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('DASS-21 Result'),
+              content: Text('Risk level: $risk\nScoring: ${scoring.toString()}'),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    if (risk == 'Crisis') {
+                      CrisisHotlineSheet.show(context);
+                    }
+                    context.go('/dashboard');
+                  },
+                  child: const Text('Return to Dashboard'),
+                ),
+              ],
+            );
+          },
         );
-      },
-    );
+        return;
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Submission failed: $e')));
+    }
   }
 }

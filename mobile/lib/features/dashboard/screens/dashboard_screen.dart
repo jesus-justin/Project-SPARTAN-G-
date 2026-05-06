@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/services/api_service.dart';
+import '../../../core/services/storage_service.dart';
 import '../widgets/crisis_hotline_sheet.dart';
 import '../widgets/mood_energy_chart.dart';
 import '../widgets/risk_badge_widget.dart';
@@ -16,21 +18,56 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final List<double> _last7Mood = <double>[3.5, 2.8, 3.1, 2.5, 2.2, 2.7, 3.0];
-  final List<double> _last7Energy = <double>[3.8, 3.2, 2.9, 2.4, 2.0, 2.6, 2.9];
-  final List<String> _dayLabels = <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  List<double> _last7Mood = <double>[3.5, 2.8, 3.1, 2.5, 2.2, 2.7, 3.0];
+  List<double> _last7Energy = <double>[3.8, 3.2, 2.9, 2.4, 2.0, 2.6, 2.9];
+  List<String> _dayLabels = <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-  final String _riskLevel = 'Moderate';
+  String _riskLevel = 'Unknown';
   bool _hasShownCrisisSheet = false;
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_riskLevel == 'Crisis' && !_hasShownCrisisSheet) {
-      _hasShownCrisisSheet = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        CrisisHotlineSheet.show(context);
-      });
+  void initState() {
+    super.initState();
+    _loadDashboard();
+  }
+
+  Future<void> _loadDashboard() async {
+    try {
+      final ApiService api = ApiService();
+      final dynamic resp = await api.get('/student/dashboard');
+      if (resp is Map<String, dynamic> && resp['data'] != null) {
+        final data = resp['data'];
+        final String name = data['name']?.toString() ?? '';
+        final String risk = data['riskLevel']?.toString() ?? data['risk_level']?.toString() ?? 'Unknown';
+        final List<dynamic> esm = data['esm'] is List ? List<dynamic>.from(data['esm']) : [];
+
+        setState(() {
+          _riskLevel = risk;
+          if (esm.isNotEmpty) {
+            _last7Mood = esm.map<double>((e) => (e['mood'] as num).toDouble()).toList();
+            _last7Energy = esm.map<double>((e) => (e['energy'] as num).toDouble()).toList();
+            _dayLabels = List<String>.generate(_last7Mood.length, (index) => '${index + 1}');
+          }
+        });
+
+        // update provider student name
+        if (name.isNotEmpty) {
+          await StorageService.setString('student_name', name);
+          if (!mounted) return;
+          try {
+            await context.read<AuthProvider>().initialize();
+          } catch (_) {}
+        }
+
+        if (_riskLevel == 'Crisis' && !_hasShownCrisisSheet) {
+          _hasShownCrisisSheet = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            CrisisHotlineSheet.show(context);
+          });
+        }
+      }
+    } catch (_) {
+      // ignore
     }
   }
 

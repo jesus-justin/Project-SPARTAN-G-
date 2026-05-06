@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../constants/api_constants.dart';
@@ -31,13 +32,15 @@ class ApiService {
   }
 
   Future<dynamic> get(String endpoint) async {
-    final Uri uri = Uri.parse('$apiBaseUrl$endpoint');
+    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.get(uri, headers: await _headers());
     return _handleResponse(response);
   }
 
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
-    final Uri uri = Uri.parse('$apiBaseUrl$endpoint');
+    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.post(
       uri,
       headers: await _headers(),
@@ -47,7 +50,8 @@ class ApiService {
   }
 
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
-    final Uri uri = Uri.parse('$apiBaseUrl$endpoint');
+    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.put(
       uri,
       headers: await _headers(),
@@ -57,7 +61,8 @@ class ApiService {
   }
 
   Future<dynamic> delete(String endpoint) async {
-    final Uri uri = Uri.parse('$apiBaseUrl$endpoint');
+    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.delete(uri, headers: await _headers());
     return _handleResponse(response);
   }

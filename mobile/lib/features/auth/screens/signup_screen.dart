@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/services/api_service.dart';
+import '../../../core/services/storage_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -24,15 +26,35 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Sign-up flow initialized. Please connect backend endpoint next.')),
-    );
-    context.go('/login');
+    final ApiService api = ApiService();
+    final Map<String, dynamic> body = {
+      'studentId': _studentIdController.text.trim(),
+      'password': _passwordController.text,
+      'firstName': _nameController.text.trim(),
+      'lastName': _nameController.text.trim(),
+      'yearLevel': '1',
+    };
+
+    try {
+      final dynamic resp = await api.post('/auth/register', body: body);
+      if (resp is Map<String, dynamic> && resp['data'] != null) {
+        final token = resp['data']['token'];
+        if (token != null) {
+          await StorageService.saveToken(token.toString());
+          if (!mounted) return;
+          context.go('/consent');
+          return;
+        }
+      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign up failed')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sign up error: $e')));
+    }
   }
 
   @override

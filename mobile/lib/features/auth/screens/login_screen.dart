@@ -6,6 +6,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_strings.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/api_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -43,12 +44,25 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     if (ok) {
-      final bool consentGiven = await StorageService.getBool('consent_given') ?? false;
-      if (!mounted) {
+      // Fetch dashboard to check consentFlag from server
+      final ApiService api = ApiService();
+      try {
+        final dynamic dash = await api.get('/student/dashboard');
+        final bool consentFlag = dash is Map<String, dynamic> && dash['data'] != null ? dash['data']['consentFlag'] == true : false;
+        if (!mounted) {
+          return;
+        }
+        context.go(consentFlag ? '/dashboard' : '/consent');
+        return;
+      } catch (_) {
+        // fallback to local stored flag
+        final bool consentGiven = await StorageService.getBool('consent_given') ?? false;
+        if (!mounted) {
+          return;
+        }
+        context.go(consentGiven ? '/dashboard' : '/consent');
         return;
       }
-      context.go(consentGiven ? '/dashboard' : '/consent');
-      return;
     }
 
     final String message = authProvider.errorMessage ?? 'Login failed.';

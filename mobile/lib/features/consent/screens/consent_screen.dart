@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/storage_service.dart';
+import '../../../core/services/api_service.dart';
 
 class ConsentScreen extends StatefulWidget {
   const ConsentScreen({super.key});
@@ -18,11 +19,16 @@ class _ConsentScreenState extends State<ConsentScreen> {
     if (!_agreed) {
       return;
     }
-    await StorageService.setBool('consent_given', true);
-    if (!mounted) {
-      return;
+
+    final ApiService api = ApiService();
+    try {
+      await api.post('/student/consent', body: {'accepted': true});
+      await StorageService.setBool('consent_given', true);
+      if (!mounted) return;
+      context.go('/dashboard');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Consent failed: $e')));
     }
-    context.go('/dashboard');
   }
 
   @override

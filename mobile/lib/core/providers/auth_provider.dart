@@ -48,9 +48,12 @@ class AuthProvider extends ChangeNotifier {
         },
       );
 
-      if (response is Map<String, dynamic>) {
-        final String? jwt = response['token']?.toString();
-        final String? name = response['student']?['name']?.toString() ?? response['name']?.toString();
+      // Backend returns { success: true, data: { token, user } }
+      if (response is Map<String, dynamic> && response['data'] != null) {
+        final Map<String, dynamic> data = Map<String, dynamic>.from(response['data']);
+        final String? jwt = data['token']?.toString();
+        final Map<String, dynamic>? user = data['user'] is Map<String, dynamic> ? Map<String, dynamic>.from(data['user']) : null;
+        final String? name = user != null ? '${user['firstName'] ?? user['first_name'] ?? ''} ${user['lastName'] ?? user['last_name'] ?? ''}'.trim() : null;
 
         if (jwt == null || jwt.isEmpty) {
           _errorMessage = 'No token received from server.';

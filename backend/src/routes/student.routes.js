@@ -53,4 +53,57 @@ router.post('/consent', requireAuth, async (req, res, next) => {
   }
 });
 
+
+router.get('/dashboard', requireAuth, async (req, res, next) => {
+  try {
+    // get student basic info
+    const userRes = await query(
+      `SELECT id, student_id, first_name, last_name, year_level, role, created_at
+       FROM users
+       WHERE id = $1`,
+      [req.user.id]
+    );
+
+    if (userRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const user = userRes.rows[0];
+
+    // check consent
+    const consentRes = await query(
+      `SELECT accepted FROM student_consents WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id]
+    );
+    const consentFlag = consentRes.rowCount > 0 ? Boolean(consentRes.rows[0].accepted) : false;
+
+    // latest DASS-21 risk
+    const dassRes = await query(
+      `SELECT risk_level FROM dass21_assessments WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id]
+    );
+    const riskLevel = dassRes.rowCount > 0 ? dassRes.rows[0].risk_level : 'Unknown';
+
+    // last 7 ESM checkins
+    const esmRes = await query(
+      `SELECT mood, energy, created_at FROM esm_checkins WHERE user_id = $1 ORDER BY created_at DESC LIMIT 7`,
+      [req.user.id]
+    );
+    const esmRows = esmRes.rows || [];
+    const esm = esmRows.map((r) => ({ mood: r.mood, energy: r.energy, createdAt: r.created_at })).reverse();
+
+    return res.json({
+      success: true,
+      data: {
+        name: `${user.first_name} ${user.last_name}`,
+        riskLevel,
+        consentFlag,
+        esm,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 export default router;
