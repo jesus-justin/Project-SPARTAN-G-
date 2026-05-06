@@ -28,6 +28,11 @@ app.use(
   })
 );
 
+// Health endpoints: respond for GET (used by uptime checks) and POST (legacy/client)
+app.get('/api/health', (_req, res) => {
+  return res.json({ success: true, status: 'ok' });
+});
+
 app.post('/api/health', (_req, res) => {
   return res.json({ success: true, status: 'ok' });
 });

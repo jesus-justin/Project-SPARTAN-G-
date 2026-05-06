@@ -3,46 +3,41 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
-import pg from 'pg';
+import mysql from 'mysql2/promise';
 
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const { Client } = pg;
+const { DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME } = process.env;
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  throw new Error('Missing required environment variable: DATABASE_URL');
+if (!DB_HOST || !DB_PORT || !DB_USER || typeof DB_NAME === 'undefined') {
+  throw new Error('Missing required DB environment variables');
 }
-
-const parsedUrl = new URL(DATABASE_URL);
-const targetDbName = parsedUrl.pathname.replace(/^\//, '');
-
-if (!targetDbName) {
-  throw new Error('DATABASE_URL must include a database name');
-}
-
-const adminUrl = new URL(DATABASE_URL);
-adminUrl.pathname = '/postgres';
 
 async function ensureDatabaseExists() {
-  const adminClient = new Client({ connectionString: adminUrl.toString() });
-  await adminClient.connect();
+  const adminConn = await mysql.createConnection({
+    host: DB_HOST,
+    port: Number(DB_PORT),
+    user: DB_USER,
+    password: DB_PASSWORD || undefined,
+    multipleStatements: true,
+  });
 
   try {
-    const checkResult = await adminClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [targetDbName]);
-
-    if (checkResult.rowCount === 0) {
-      await adminClient.query(`CREATE DATABASE "${targetDbName.replace(/"/g, '""')}"`);
-    }
+    await adminConn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`);
   } finally {
-    await adminClient.end();
+    await adminConn.end();
   }
 }
 
 async function runSchemaAndSeed() {
-  const appClient = new Client({ connectionString: DATABASE_URL });
-  await appClient.connect();
+  const pool = await mysql.createPool({
+    host: DB_HOST,
+    port: Number(DB_PORT),
+    user: DB_USER,
+    password: DB_PASSWORD || undefined,
+    database: DB_NAME,
+    multipleStatements: true,
+  });
 
   try {
     const __filename = fileURLToPath(import.meta.url);
@@ -50,30 +45,30 @@ async function runSchemaAndSeed() {
     const schemaPath = path.resolve(__dirname, '../db/schema.sql');
     const schemaSql = await fs.readFile(schemaPath, 'utf8');
 
-    await appClient.query(schemaSql);
+    await pool.query(schemaSql);
 
     const facilitatorEmail = 'ogc@batstateu.edu.ph';
     const facilitatorPassword = 'OGC@2025';
     const passwordHash = await bcrypt.hash(facilitatorPassword, 12);
 
-    await appClient.query(
+    await pool.query(
       `INSERT INTO users (student_id, password_hash, first_name, last_name, year_level, role)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (student_id)
-       DO UPDATE SET
-         password_hash = EXCLUDED.password_hash,
-         first_name = EXCLUDED.first_name,
-         last_name = EXCLUDED.last_name,
-         year_level = EXCLUDED.year_level,
-         role = EXCLUDED.role`,
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         password_hash = VALUES(password_hash),
+         first_name = VALUES(first_name),
+         last_name = VALUES(last_name),
+         year_level = VALUES(year_level),
+         role = VALUES(role)`,
       [facilitatorEmail, passwordHash, 'OGC', 'Facilitator', null, 'facilitator']
     );
   } finally {
-    await appClient.end();
+    await pool.end();
   }
 }
 
-await ensureDatabaseExists();
-await runSchemaAndSeed();
-
-console.log('Database setup complete');
+(async () => {
+  await ensureDatabaseExists();
+  await runSchemaAndSeed();
+  console.log('Database setup complete');
+})();
