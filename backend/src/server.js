@@ -1,0 +1,29 @@
+import app from './app.js';
+import { env } from './config/env.js';
+import { healthcheckDb, pool } from './config/db.js';
+
+async function start() {
+  try {
+    await healthcheckDb();
+
+    const server = app.listen(env.port, () => {
+      console.log(`SPARTAN-G backend listening on port ${env.port}`);
+    });
+
+    const shutdown = async () => {
+      console.log('Shutting down server...');
+      server.close(async () => {
+        await pool.end();
+        process.exit(0);
+      });
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
+  } catch (error) {
+    console.error('Failed to start backend:', error.message);
+    process.exit(1);
+  }
+}
+
+start();
