@@ -13,6 +13,11 @@ import 'features/cssrs/screens/cssrs_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/dass21/screens/dass21_screen.dart';
 import 'features/esm/screens/esm_checkin_screen.dart';
+import 'features/phq9/screens/phq9_screen.dart';
+import 'features/gad7/screens/gad7_screen.dart';
+import 'features/ginhawa/screens/ginhawa_home_screen.dart';
+import 'features/ginhawa/screens/content_detail_screen.dart';
+import 'features/ginhawa/screens/safety_plan_screen.dart';
 
 class SpartanGApp extends StatefulWidget {
   const SpartanGApp({super.key});
@@ -94,6 +99,29 @@ class _SpartanGAppState extends State<SpartanGApp> {
         GoRoute(
           path: '/dashboard',
           builder: (BuildContext context, GoRouterState state) => const DashboardScreen(),
+        ),
+        GoRoute(
+          path: '/phq9',
+          builder: (BuildContext context, GoRouterState state) => const Phq9Screen(),
+        ),
+        GoRoute(
+          path: '/gad7',
+          builder: (BuildContext context, GoRouterState state) => const Gad7Screen(),
+        ),
+        GoRoute(
+          path: '/ginhawa',
+          builder: (BuildContext context, GoRouterState state) => const GinhawaHomeScreen(),
+        ),
+        GoRoute(
+          path: '/ginhawa/content/:id',
+          builder: (BuildContext context, GoRouterState state) {
+            final String id = state.pathParameters['id'] ?? '';
+            return ContentDetailScreen(contentId: id);
+          },
+        ),
+        GoRoute(
+          path: '/ginhawa/safety-plan',
+          builder: (BuildContext context, GoRouterState state) => const SafetyPlanScreen(),
         ),
       ],
     );

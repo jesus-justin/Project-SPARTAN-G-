@@ -5,25 +5,25 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_service.dart';
 import '../../dashboard/widgets/crisis_hotline_sheet.dart';
 
-class Dass21Screen extends StatefulWidget {
-  const Dass21Screen({super.key});
+class Phq9Screen extends StatefulWidget {
+  const Phq9Screen({super.key});
 
   @override
-  State<Dass21Screen> createState() => _Dass21ScreenState();
+  State<Phq9Screen> createState() => _Phq9ScreenState();
 }
 
-class _Dass21ScreenState extends State<Dass21Screen> {
+class _Phq9ScreenState extends State<Phq9Screen> {
   static const List<String> _options = <String>[
-    'Did not apply to me at all',
-    'Applied to me to some degree',
-    'Applied to me to a considerable degree',
-    'Applied to me very much or most of the time',
+    'Not at all',
+    'Several days',
+    'More than half the days',
+    'Nearly every day',
   ];
 
-  List<String> _questions = <String>[];
+  List<Map<String, dynamic>> _questions = <Map<String, dynamic>>[];
 
   int _currentIndex = 0;
-  List<int?> _answers = List<int?>.filled(21, null);
+  List<int?> _answers = List<int?>.filled(9, null);
 
   int get _answeredCount => _answers.whereType<int>().length;
 
@@ -36,11 +36,11 @@ class _Dass21ScreenState extends State<Dass21Screen> {
   Future<void> _loadQuestions() async {
     try {
       final ApiService api = ApiService();
-      final dynamic resp = await api.get('/assessments/dass21/questions');
+      final dynamic resp = await api.get('/assessments/phq9/questions');
       if (resp is Map<String, dynamic> && resp['data'] is List) {
         final List<dynamic> q = resp['data'];
         setState(() {
-          _questions = q.map((e) => e.toString()).toList();
+          _questions = q.map((e) => Map<String, dynamic>.from(e as Map)).toList();
           _answers = List<int?>.filled(_questions.length, null);
         });
       }
@@ -51,12 +51,27 @@ class _Dass21ScreenState extends State<Dass21Screen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_questions.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('PHQ-9'),
+          leading: IconButton(
+            onPressed: () => context.pop(),
+            icon: const Icon(Icons.arrow_back),
+          ),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     final bool isLast = _currentIndex == _questions.length - 1;
     final int? selectedAnswer = _answers[_currentIndex];
+    final Map<String, dynamic> question = _questions[_currentIndex];
+    final String questionText = question['text'] as String? ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('DASS-21'),
+        title: const Text('PHQ-9 Depression Screening'),
         leading: IconButton(
           onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back),
@@ -69,19 +84,19 @@ class _Dass21ScreenState extends State<Dass21Screen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
-                'Question ${_currentIndex + 1} of 21',
+                'Question ${_currentIndex + 1} of 9',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
               LinearProgressIndicator(
-                value: (_currentIndex + 1) / 21,
+                value: (_currentIndex + 1) / 9,
                 color: AppColors.primaryRed,
                 backgroundColor: const Color(0xFFE5E7EB),
               ),
               const SizedBox(height: 20),
               Text(
-                _questions[_currentIndex],
-                style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                questionText,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 14),
               Expanded(
@@ -92,7 +107,7 @@ class _Dass21ScreenState extends State<Dass21Screen> {
                       value: index,
                       groupValue: selectedAnswer,
                       activeColor: AppColors.primaryRed,
-                      title: Text('$index = ${_options[index]}'),
+                      title: Text(_options[index]),
                       onChanged: (int? value) {
                         setState(() {
                           _answers[_currentIndex] = value;
@@ -142,7 +157,7 @@ class _Dass21ScreenState extends State<Dass21Screen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Answered: $_answeredCount / 21',
+                'Answered: $_answeredCount / 9',
                 style: const TextStyle(color: AppColors.textSecondary),
               ),
             ],
@@ -156,18 +171,19 @@ class _Dass21ScreenState extends State<Dass21Screen> {
     final List<int> answers = _answers.map((e) => e ?? 0).cast<int>().toList();
     try {
       final ApiService api = ApiService();
-      final dynamic resp = await api.post('/assessments/dass21', body: {'answers': answers});
+      final dynamic resp = await api.post('/assessments/phq9', body: {'answers': answers});
       if (!mounted) return;
       if (resp is Map<String, dynamic> && resp['data'] != null) {
-        final String risk = resp['data']['riskLevel']?.toString() ?? resp['data']['risk_level']?.toString() ?? 'Unknown';
-        final Map<String, dynamic> scoring = resp['data']['scoring'] is Map ? Map<String, dynamic>.from(resp['data']['scoring']) : {};
-        // show result dialog
+        final String severity = resp['data']['scoring']?['severity']?.toString() ?? 'Unknown';
+        final int totalScore = resp['data']['scoring']?['totalScore'] as int? ?? 0;
+        final String risk = resp['data']['riskLevel']?.toString() ?? 'Unknown';
+
         showDialog<void>(
           context: context,
           builder: (BuildContext context) {
             return AlertDialog(
-              title: const Text('DASS-21 Result'),
-              content: Text('Risk level: $risk\nScoring: ${scoring.toString()}'),
+              title: const Text('PHQ-9 Result'),
+              content: Text('Severity: $severity\nTotal Score: $totalScore\nRisk Level: $risk'),
               actions: <Widget>[
                 TextButton(
                   onPressed: () {
@@ -175,9 +191,9 @@ class _Dass21ScreenState extends State<Dass21Screen> {
                     if (risk == 'Crisis') {
                       CrisisHotlineSheet.show(context);
                     }
-                    context.go('/phq9');
+                    context.go('/gad7');
                   },
-                  child: const Text('Next: PHQ-9'),
+                  child: const Text('Next: GAD-7'),
                 ),
               ],
             );
