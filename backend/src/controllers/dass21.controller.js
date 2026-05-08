@@ -24,6 +24,40 @@ export async function submitDass21(req, res, next) {
       ]
     );
 
+    if (riskLevel === 'High' || riskLevel === 'Crisis') {
+      await query(
+        `CREATE TABLE IF NOT EXISTS ogc_notifications (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          student_id INT,
+          facilitator_user_id INT NULL,
+          risk_level VARCHAR(32) NULL,
+          title VARCHAR(255),
+          body TEXT,
+          seen TINYINT(1) DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )`
+      );
+
+      const facilitatorRes = await query(
+        `SELECT id FROM users WHERE role = $1 ORDER BY id ASC LIMIT 1`,
+        ['facilitator']
+      );
+      const facilitatorId = facilitatorRes.rowCount > 0 ? facilitatorRes.rows[0].id : null;
+
+      await query(
+        `INSERT INTO ogc_notifications (student_id, facilitator_user_id, risk_level, title, body, seen)
+         VALUES ($1, $2, $3, $4, $5, 0)`,
+        [
+          req.user.id,
+          facilitatorId,
+          riskLevel,
+          `${riskLevel} Risk Alert`,
+          `Student ${req.user.studentId} was classified as ${riskLevel} risk.`,
+        ]
+      );
+    }
+
     return res.status(201).json({
       success: true,
       data: {

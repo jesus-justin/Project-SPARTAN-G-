@@ -6,6 +6,7 @@ import { loginRateLimiter } from '../middleware/rateLimiter.js';
 const router = Router();
 
 router.post('/register', register);
+router.post('/signup', register);
 router.post('/login', loginRateLimiter, login);
 router.post('/facilitator/login', loginRateLimiter, facilitatorLogin);
 router.get('/me', requireAuth, me);

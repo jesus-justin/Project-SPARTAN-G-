@@ -9,13 +9,16 @@ const router = Router();
 router.use(requireAuth);
 
 router.post('/dass21', submitDass21);
+router.post('/dass21/submit', submitDass21);
 router.get('/dass21/questions', getDass21Questions);
 router.get('/dass21/latest', getLatestDass21);
 
 router.post('/cssrs', submitCssrs);
+router.post('/cssrs/submit', submitCssrs);
 router.get('/cssrs/latest', getLatestCssrs);
 
 router.post('/esm', submitEsm);
+router.post('/esm/submit', submitEsm);
 router.get('/esm/recent', getRecentEsm);
 
 export default router;

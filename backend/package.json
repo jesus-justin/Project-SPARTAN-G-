@@ -8,7 +8,7 @@
     "setup": "node src/scripts/setup-db.js",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test": "node src/scripts/smoke-test.js"
+    "test": "node src/scripts/smoke-test.js",
     "check": "node src/server.js"
   },
   "dependencies": {
