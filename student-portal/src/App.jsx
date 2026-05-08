@@ -8,6 +8,11 @@ import Dass21Page from './pages/Dass21Page';
 import CssrsPage from './pages/CssrsPage';
 import EsmCheckinPage from './pages/EsmCheckinPage';
 import DashboardPage from './pages/DashboardPage';
+import Phq9Page from './pages/Phq9Page';
+import Gad7Page from './pages/Gad7Page';
+import GinhawaPage from './pages/GinhawaPage';
+import SafetyPlanPage from './pages/SafetyPlanPage';
+import ContentDetailPage from './pages/ContentDetailPage';
 import { useAuth } from './context/AuthContext';
 
 function Shell({ children }) {
@@ -55,6 +60,22 @@ export default function App() {
           }
         />
         <Route
+          path="/phq9"
+          element={
+            <ProtectedRoute>
+              <Phq9Page />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/gad7"
+          element={
+            <ProtectedRoute>
+              <Gad7Page />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/cssrs"
           element={
             <ProtectedRoute>
@@ -67,6 +88,30 @@ export default function App() {
           element={
             <ProtectedRoute>
               <EsmCheckinPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ginhawa"
+          element={
+            <ProtectedRoute>
+              <GinhawaPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/safety-plan"
+          element={
+            <ProtectedRoute>
+              <SafetyPlanPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/content/:id"
+          element={
+            <ProtectedRoute>
+              <ContentDetailPage />
             </ProtectedRoute>
           }
         />

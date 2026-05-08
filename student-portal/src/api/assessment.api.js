@@ -5,6 +5,26 @@ export async function submitDass21(answers) {
   return data;
 }
 
+export async function getPhq9Questions() {
+  const { data } = await client.get('/assessments/phq9/questions');
+  return data;
+}
+
+export async function submitPhq9(answers) {
+  const { data } = await client.post('/assessments/phq9/submit', { answers });
+  return data;
+}
+
+export async function getGad7Questions() {
+  const { data } = await client.get('/assessments/gad7/questions');
+  return data;
+}
+
+export async function submitGad7(answers) {
+  const { data } = await client.post('/assessments/gad7/submit', { answers });
+  return data;
+}
+
 export async function submitCssrs(payload) {
   const { data } = await client.post('/assessments/cssrs', payload);
   return data;

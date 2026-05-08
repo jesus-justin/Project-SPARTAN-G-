@@ -106,4 +106,30 @@ router.get('/dashboard', requireAuth, async (req, res, next) => {
   }
 });
 
+router.get('/trajectory', requireAuth, async (req, res, next) => {
+  try {
+    const result = await query(
+      `SELECT trajectory, mood_slope, energy_slope FROM risk_classifications
+       WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [req.user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.json({ success: true, data: { trajectory: 'Insufficient Data', moodSlope: 0, energySlope: 0 } });
+    }
+
+    const data = result.rows[0];
+    return res.json({
+      success: true,
+      data: {
+        trajectory: data.trajectory,
+        moodSlope: data.mood_slope,
+        energySlope: data.energy_slope,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
 export default router;

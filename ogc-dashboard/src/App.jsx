@@ -3,6 +3,8 @@ import FacilitatorProtectedRoute from './components/FacilitatorProtectedRoute';
 import OgcLoginPage from './pages/OgcLoginPage';
 import OgcDashboardPage from './pages/OgcDashboardPage';
 import StudentDetailPage from './pages/StudentDetailPage';
+import GinhawaManagePage from './pages/GinhawaManagePage';
+import AppointmentsPage from './pages/AppointmentsPage';
 import { useFacilitatorAuth } from './context/FacilitatorAuthContext';
 
 export default function App() {
@@ -25,6 +27,22 @@ export default function App() {
           element={
             <FacilitatorProtectedRoute>
               <StudentDetailPage />
+            </FacilitatorProtectedRoute>
+          }
+        />
+        <Route
+          path="/ginhawa-manage"
+          element={
+            <FacilitatorProtectedRoute>
+              <GinhawaManagePage />
+            </FacilitatorProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointments"
+          element={
+            <FacilitatorProtectedRoute>
+              <AppointmentsPage />
             </FacilitatorProtectedRoute>
           }
         />

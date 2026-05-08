@@ -5,6 +5,8 @@ import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import assessmentRoutes from './routes/assessment.routes.js';
 import ogcRoutes from './routes/ogc.routes.js';
+import gabayRoutes from './routes/gabay.routes.js';
+import ginhawaRoutes from './routes/ginhawa.routes.js';
 import { env } from './config/env.js';
 
 const app = express();
@@ -41,6 +43,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/ogc', ogcRoutes);
+app.use('/api/gabay', gabayRoutes);
+app.use('/api/ginhawa', ginhawaRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({ success: false, message: `Route not found: ${req.method} ${req.path}` });
