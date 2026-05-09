@@ -4,10 +4,23 @@ import client from '../api/client';
 import MoodEnergyChart from '../components/MoodEnergyChart';
 import RiskBadge from '../components/RiskBadge';
 import CrisisAlert from '../components/CrisisAlert';
+import OverviewChart from '../components/OverviewChart';
+import Dass21Chart from '../components/Dass21Chart';
+import Phq9Chart from '../components/Phq9Chart';
+import Gad7Chart from '../components/Gad7Chart';
 import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage() {
   const [esmEntries, setEsmEntries] = useState([]);
+  const [latestScores, setLatestScores] = useState(null);
+  const [dassHistory, setDassHistory] = useState([]);
+  const [phqHistory, setPhqHistory] = useState([]);
+  const [gadHistory, setGadHistory] = useState([]);
+  const [overviewDesc, setOverviewDesc] = useState('');
+  const [dassDesc, setDassDesc] = useState('');
+  const [phqDesc, setPhqDesc] = useState('');
+  const [gadDesc, setGadDesc] = useState('');
+  const [activeTab, setActiveTab] = useState(0);
   const [riskLevel, setRiskLevel] = useState('Unknown');
   const [trajectory, setTrajectory] = useState('Unknown');
   const [displayName, setDisplayName] = useState('Student');
@@ -28,6 +41,14 @@ export default function DashboardPage() {
           setDisplayName(normalizeDisplayName(student.name || buildUserName(user)));
           setRiskLevel(data.currentRisk || 'Unknown');
           setEsmEntries((data.esmData && data.esmData.last7Days) ? data.esmData.last7Days : []);
+          setLatestScores(data.latestScores || null);
+          setDassHistory(Array.isArray(data.dass21History) ? data.dass21History : []);
+          setPhqHistory(Array.isArray(data.phq9History) ? data.phq9History : []);
+          setGadHistory(Array.isArray(data.gad7History) ? data.gad7History : []);
+          setOverviewDesc((data.generalSummary && data.generalSummary.description) ? data.generalSummary.description : '');
+          setDassDesc(data.dassDescription || '');
+          setPhqDesc(data.phqDescription || '');
+          setGadDesc(data.gadDescription || '');
         } else {
           setDisplayName(normalizeDisplayName(buildUserName(user)));
         }
@@ -93,8 +114,44 @@ export default function DashboardPage() {
       {riskLevel === 'Crisis' && <CrisisAlert />}
 
       <div style={{ marginTop: 16 }}>
-        <h3 style={{ marginTop: 0 }}>Last 7 ESM Entries</h3>
-        <MoodEnergyChart entries={esmEntries} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+          {['Overview', 'DASS-21', 'PHQ-9', 'GAD-7', 'Daily Check-in'].map((t, i) => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(i)}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                border: activeTab === i ? '2px solid #d32f2f' : '1px solid #eee',
+                background: activeTab === i ? '#ffecec' : '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <div>
+          {activeTab === 0 && (
+            <div>
+              {/* Overview chart */}
+              <div style={{ marginBottom: 12 }}>
+                {/* Lazy: reuse small bar chart inline */}
+                <OverviewChart data={latestScores || {}} description={overviewDesc} />
+              </div>
+            </div>
+          )}
+          {activeTab === 1 && <Dass21Chart history={dassHistory} description={dassDesc} />}
+          {activeTab === 2 && <Phq9Chart history={phqHistory} description={phqDesc} />}
+          {activeTab === 3 && <Gad7Chart history={gadHistory} description={gadDesc} />}
+          {activeTab === 4 && (
+            <div>
+              <h4 style={{ marginTop: 0 }}>Last 7 ESM Entries</h4>
+              <MoodEnergyChart entries={esmEntries} />
+            </div>
+          )}
+        </div>
       </div>
 
       {latest && (

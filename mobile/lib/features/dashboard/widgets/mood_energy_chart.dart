@@ -17,8 +17,28 @@ class MoodEnergyChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (moodValues.isEmpty && energyValues.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.edit_calendar_outlined, size: 48, color: Colors.grey),
+            const SizedBox(height: 8),
+            const Text('No check-in data for the past 7 days', style: TextStyle(fontSize: 16)),
+            const SizedBox(height: 6),
+            const Text('Complete your daily check-ins to track your mood and energy trends', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: () => Navigator.of(context).pushNamed('/esm'), child: const Text('Check In Now')),
+          ],
+        ),
+      );
+    }
+
+    final double avgMood = moodValues.isNotEmpty ? moodValues.reduce((a,b) => a+b)/moodValues.length : 0.0;
+    final double avgEnergy = energyValues.isNotEmpty ? energyValues.reduce((a,b) => a+b)/energyValues.length : 0.0;
+
     return SizedBox(
-      height: 250,
+      height: 300,
       child: LineChart(
         LineChartData(
           minY: 0,
@@ -75,15 +95,17 @@ class MoodEnergyChart extends StatelessWidget {
               },
             ),
           ),
+          extraLinesData: ExtraLinesData(horizontalLines: [
+            HorizontalLine(y: avgMood, color: AppColors.primaryRed.withOpacity(0.6), strokeWidth: 1, dashArray: [6,4]),
+            HorizontalLine(y: avgEnergy, color: const Color(0xFF0288D1).withOpacity(0.6), strokeWidth: 1, dashArray: [6,4]),
+          ]),
+
           lineBarsData: <LineChartBarData>[
             LineChartBarData(
               isCurved: true,
               barWidth: 3,
               color: AppColors.primaryRed,
-              spots: List<FlSpot>.generate(
-                moodValues.length,
-                (int i) => FlSpot(i.toDouble(), moodValues[i]),
-              ),
+              spots: List<FlSpot>.generate(moodValues.length, (int i) => FlSpot(i.toDouble(), moodValues[i])),
               dotData: const FlDotData(show: true),
             ),
             LineChartBarData(
@@ -96,18 +118,7 @@ class MoodEnergyChart extends StatelessWidget {
               ),
               dotData: const FlDotData(show: true),
             ),
-            // baseline placeholder (if moodValues present)
-            if (moodValues.isNotEmpty) LineChartBarData(
-              isCurved: false,
-              barWidth: 1,
-              color: Colors.grey.withOpacity(0.9),
-              dashArray: [5, 5],
-              spots: [
-                FlSpot(0, moodValues.reduce((a, b) => a + b) / moodValues.length),
-                FlSpot((moodValues.length - 1).toDouble(), moodValues.reduce((a, b) => a + b) / moodValues.length),
-              ],
-              dotData: const FlDotData(show: false),
-            ),
+            // baseline placeholder (if moodValues present): removed duplicate and rely on extraLinesData
           ],
         ),
       ),

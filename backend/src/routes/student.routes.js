@@ -175,12 +175,8 @@ router.get('/dashboard', requireAuth, async (req, res, next) => {
       return 'Extremely Severe';
     };
 
-    // build latestScores object
-    const latestScores = {
-      dass21: null,
-      phq9: null,
-      gad7: null,
-    };
+    // build latestScores object and full histories
+    const latestScores = { dass21: null, phq9: null, gad7: null };
 
     if (dassRow) {
       const depressionScaled = dassRow.depression_score * 2;
@@ -203,23 +199,138 @@ router.get('/dashboard', requireAuth, async (req, res, next) => {
       latestScores.gad7 = { totalScore: gadRow.total_score, severity: gadSeverity };
     }
 
-    return res.json({
-      success: true,
-      data: {
-        student: { name: `${user.first_name} ${user.last_name}`, college: user.college || null, yearLevel: user.year_level || null },
-        currentRisk,
-        trajectory,
-        esmData: {
-          last7Days,
-          rollingAverage7d,
-          rollingAverage14d: rollingAverage14d,
-          rollingAverage30d: rollingAverage30d,
-        },
-        latestScores,
-        riskHistory,
-        shapDrivers,
-      },
+    // fetch full histories
+    const dassHistRes = await query(
+      `SELECT depression_score, anxiety_score, stress_score, total_score, risk_level, created_at
+       FROM dass21_assessments WHERE user_id = $1 ORDER BY created_at ASC`,
+      [req.user.id]
+    );
+
+    const dassHistory = (dassHistRes.rows || []).map((r) => {
+      const dep = r.depression_score != null ? Number(r.depression_score) : null;
+      const anx = r.anxiety_score != null ? Number(r.anxiety_score) : null;
+      const str = r.stress_score != null ? Number(r.stress_score) : null;
+      const depScaled = dep != null ? dep * 2 : null;
+      const anxScaled = anx != null ? anx * 2 : null;
+      const strScaled = str != null ? str * 2 : null;
+      return {
+        date: r.created_at instanceof Date ? r.created_at.toISOString().slice(0,10) : `${r.created_at}`,
+        depression: depScaled != null ? { scaled: depScaled, severity: dassSeverity(depScaled) } : null,
+        anxiety: anxScaled != null ? { scaled: anxScaled, severity: dassSeverity(anxScaled) } : null,
+        stress: strScaled != null ? { scaled: strScaled, severity: dassSeverity(strScaled) } : null,
+      };
     });
+
+    const phqHistRes = await query(
+      `SELECT total_score, severity, submitted_at FROM phq9_responses WHERE user_id = $1 ORDER BY submitted_at ASC`,
+      [req.user.id]
+    );
+    const phqHistory = (phqHistRes.rows || []).map((r) => ({ date: r.submitted_at instanceof Date ? r.submitted_at.toISOString().slice(0,10) : `${r.submitted_at}`, totalScore: r.total_score, severity: r.severity || null }));
+
+    const gadHistRes = await query(
+      `SELECT total_score, severity, submitted_at FROM gad7_responses WHERE user_id = $1 ORDER BY submitted_at ASC`,
+      [req.user.id]
+    );
+    const gadHistory = (gadHistRes.rows || []).map((r) => ({ date: r.submitted_at instanceof Date ? r.submitted_at.toISOString().slice(0,10) : `${r.submitted_at}`, totalScore: r.total_score, severity: r.severity || null }));
+
+    // helper functions for descriptions
+    const anySeverityInDass = (entries, level) => entries.some((e) => {
+      if (!e) return false;
+      const sevList = [e.depression?.severity, e.anxiety?.severity, e.stress?.severity].filter(Boolean);
+      return sevList.some((s) => s === level);
+    });
+
+    const computeDassDescription = (history, latest) => {
+      if (!latest) return 'No DASS-21 data yet.';
+      if (anySeverityInDass([latest], 'Extremely Severe')) return 'Your results are concerning. Please contact OGC immediately for assistance.';
+      if (anySeverityInDass([latest], 'Severe')) return 'Your results show severe subscale levels. Please reach out to OGC for support.';
+      if (anySeverityInDass([latest], 'Moderate')) return 'Your results indicate moderate subscale levels. We recommend scheduling a check-in with OGC.';
+      if (anySeverityInDass([latest], 'Mild')) return 'Your results show mild levels. Consider using the wellness resources available.';
+      return 'Your DASS-21 results are within normal ranges. Continue monitoring your wellbeing.';
+    };
+
+    const computePhqDescription = (score) => {
+      if (score == null) return 'No PHQ-9 data yet.';
+      if (score >= 20) return 'Your PHQ-9 score indicates severe depression. Please contact OGC immediately.';
+      if (score >= 15) return 'Your PHQ-9 score indicates moderately severe depression. Please schedule an OGC appointment.';
+      if (score >= 10) return 'Your PHQ-9 score indicates moderate depression. We recommend speaking with an OGC counsellor.';
+      if (score >= 5) return 'Your PHQ-9 score suggests mild depression. Consider trying the wellness resources in GINHAWA.';
+      return 'Your PHQ-9 score suggests minimal depression symptoms. Keep up your self-care routines.';
+    };
+
+    const computeGadDescription = (score) => {
+      if (score == null) return 'No GAD-7 data yet.';
+      if (score >= 15) return 'Your results show severe anxiety. Please reach out to OGC for immediate support.';
+      if (score >= 10) return 'Your results indicate moderate anxiety. Consider speaking with an OGC counsellor.';
+      if (score >= 5) return 'Your results show mild anxiety. Try the breathing exercises in Wellness Resources.';
+      return 'Your anxiety levels are minimal. Continue your current self-care practices.';
+    };
+
+    // general summary
+    const totalAssessmentsTaken = (dassHistRes.rowCount || 0) + (phqHistRes.rowCount || 0) + (gadHistRes.rowCount || 0);
+    const lastAssessedDates = [];
+    if (dassHistRes.rowCount > 0) lastAssessedDates.push(dassHistRes.rows[dassHistRes.rowCount-1].created_at);
+    if (phqHistRes.rowCount > 0) lastAssessedDates.push(phqHistRes.rows[phqHistRes.rowCount-1].submitted_at);
+    if (gadHistRes.rowCount > 0) lastAssessedDates.push(gadHistRes.rows[gadHistRes.rowCount-1].submitted_at);
+    const lastAssessedDate = lastAssessedDates.length > 0 ? (new Date(Math.max.apply(null, lastAssessedDates.map(d => new Date(d).getTime())))).toISOString().slice(0,10) : null;
+
+    // determine overall status
+    let overallStatus = 'Your overall mental health indicators are within healthy ranges.';
+    if (currentRisk === 'Crisis' || anySeverityInDass([dassHistory[dassHistory.length-1]], 'Extremely Severe')) {
+      overallStatus = 'Your wellbeing is our priority. Please contact OGC immediately or call NCMH: 1553.';
+    } else {
+      const anySevere = (latestScores.phq9 && (latestScores.phq9.totalScore >= 15)) || (latestScores.gad7 && latestScores.gad7.totalScore >= 15) || anySeverityInDass([dassHistory[dassHistory.length-1]], 'Severe');
+      const anyModerate = (latestScores.phq9 && latestScores.phq9.totalScore >= 10) || (latestScores.gad7 && latestScores.gad7.totalScore >= 10) || anySeverityInDass([dassHistory[dassHistory.length-1]], 'Moderate');
+      if (anySevere) overallStatus = 'Your assessments indicate you may need support. Please reach out to OGC.';
+      else if (anyModerate) overallStatus = 'Some areas of your mental health need attention. Consider using the wellness resources.';
+    }
+
+    // DASS description
+    const dassLatest = dassHistory.length > 0 ? dassHistory[dassHistory.length-1] : null;
+    const dassDescription = computeDassDescription(dassHistory, dassLatest);
+
+    // PHQ description
+    const phqLatestScore = phqHistory.length > 0 ? phqHistory[phqHistory.length-1].totalScore : null;
+    const phqDescription = computePhqDescription(phqLatestScore);
+
+    // GAD description
+    const gadLatestScore = gadHistory.length > 0 ? gadHistory[gadHistory.length-1].totalScore : null;
+    const gadDescription = computeGadDescription(gadLatestScore);
+
+    // ESM description
+    const esmHasData = Array.isArray(last7Days) && last7Days.length > 0;
+    const esmAvgMood = rollingAverage7d.mood;
+    let esmDescription = 'No check-in data yet.';
+    if (esmHasData) {
+      if (esmAvgMood == null) esmDescription = 'No check-in data yet.';
+      else if (esmAvgMood >= 7) esmDescription = 'Your mood has been consistently good over the past 7 days. Keep it up!';
+      else if (esmAvgMood >= 4) esmDescription = 'Your mood has been moderate recently. Try daily wellness activities to improve your wellbeing.';
+      else esmDescription = 'Your mood has been low recently. We recommend reaching out to OGC for support.';
+    }
+
+    const generalSummary = {
+      hasData: totalAssessmentsTaken > 0 || esmHasData,
+      overallStatus,
+      description: overallStatus,
+      lastAssessedDate,
+      totalAssessmentsTaken,
+    };
+
+    const responseData = {
+      student: { name: `${user.first_name} ${user.last_name}`, college: user.college || null, yearLevel: user.year_level || null, program: user.program || null },
+      currentRisk,
+      trajectory,
+      generalSummary,
+      dass21History: { hasData: dassHistory.length > 0, entries: dassHistory, latest: dassLatest, description: dassDescription },
+      phq9History: { hasData: phqHistory.length > 0, entries: phqHistory, latest: phqHistory.length > 0 ? phqHistory[phqHistory.length-1] : null, description: phqDescription },
+      gad7History: { hasData: gadHistory.length > 0, entries: gadHistory, latest: gadHistory.length > 0 ? gadHistory[gadHistory.length-1] : null, description: gadDescription },
+      esmData: { hasData: esmHasData, last7Days, rollingAverage7d, rollingAverage14d, rollingAverage30d, description: esmDescription },
+      latestScores,
+      riskHistory,
+      shapDrivers,
+    };
+
+    return res.json({ success: true, data: responseData });
   } catch (error) {
     return next(error);
   }

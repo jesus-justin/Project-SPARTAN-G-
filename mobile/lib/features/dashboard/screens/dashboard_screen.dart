@@ -9,6 +9,10 @@ import '../../../core/services/storage_service.dart';
 import '../widgets/crisis_hotline_sheet.dart';
 import '../widgets/mood_energy_chart.dart';
 import '../widgets/risk_badge_widget.dart';
+import '../widgets/overview_chart.dart';
+import '../widgets/dass21_chart.dart';
+import '../widgets/phq9_chart.dart';
+import '../widgets/gad7_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -18,12 +22,19 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  List<double> _last7Mood = <double>[3.5, 2.8, 3.1, 2.5, 2.2, 2.7, 3.0];
-  List<double> _last7Energy = <double>[3.8, 3.2, 2.9, 2.4, 2.0, 2.6, 2.9];
-  List<String> _dayLabels = <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  List<double> _last7Mood = <double>[];
+  List<double> _last7Energy = <double>[];
+  List<String> _dayLabels = <String>[];
 
   String _riskLevel = 'Unknown';
   Map<String, dynamic>? _latestScores;
+  List<dynamic> _dassHistory = <dynamic>[];
+  List<dynamic> _phqHistory = <dynamic>[];
+  List<dynamic> _gadHistory = <dynamic>[];
+  String? _overviewDescription;
+  String? _dassDescription;
+  String? _phqDescription;
+  String? _gadDescription;
   List<dynamic> _riskHistory = <dynamic>[];
   bool _hasShownCrisisSheet = false;
 
@@ -45,10 +56,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final List<dynamic> esm = (data['esmData'] != null && data['esmData']['last7Days'] is List) ? List<dynamic>.from(data['esmData']['last7Days']) : [];
         final latestScores = data['latestScores'];
         final List<dynamic> riskHistory = data['riskHistory'] is List ? List<dynamic>.from(data['riskHistory']) : [];
+        final List<dynamic> dassHistory = data['dass21History'] is List ? List<dynamic>.from(data['dass21History']) : [];
+        final List<dynamic> phqHistory = data['phq9History'] is List ? List<dynamic>.from(data['phq9History']) : [];
+        final List<dynamic> gadHistory = data['gad7History'] is List ? List<dynamic>.from(data['gad7History']) : [];
+        final String overviewDesc = (data['generalSummary'] != null && data['generalSummary']['description'] != null) ? data['generalSummary']['description'].toString() : '';
+        final String dassDesc = data['dassDescription']?.toString() ?? '';
+        final String phqDesc = data['phqDescription']?.toString() ?? '';
+        final String gadDesc = data['gadDescription']?.toString() ?? '';
 
         setState(() {
           _riskLevel = risk;
           _latestScores = latestScores;
+          _dassHistory = dassHistory;
+          _phqHistory = phqHistory;
+          _gadHistory = gadHistory;
+          _overviewDescription = overviewDesc;
+          _dassDescription = dassDesc;
+          _phqDescription = phqDesc;
+          _gadDescription = gadDesc;
           _riskHistory = riskHistory;
           if (esm.isNotEmpty) {
             _last7Mood = esm.map<double>((e) => (e['mood'] as num).toDouble()).toList();
@@ -167,33 +192,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ],
             const SizedBox(height: 20),
-            Card(
-              color: Colors.white,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      'Last 7 Days Mood and Energy',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: const <Widget>[
-                        _LegendDot(color: AppColors.primaryRed, label: 'Mood'),
-                        SizedBox(width: 12),
-                        _LegendDot(color: Color(0xFF0288D1), label: 'Energy'),
+            // Tabs for dashboard sections
+            DefaultTabController(
+              length: 5,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  TabBar(
+                    labelColor: AppColors.primaryRed,
+                    unselectedLabelColor: Colors.black54,
+                    tabs: const <Widget>[
+                      Tab(text: 'Overview'),
+                      Tab(text: 'DASS-21'),
+                      Tab(text: 'PHQ-9'),
+                      Tab(text: 'GAD-7'),
+                      Tab(text: 'Daily Check-in'),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 360,
+                    child: TabBarView(
+                      children: <Widget>[
+                        // Overview tab
+                        Padding(padding: const EdgeInsets.all(8.0), child: OverviewChart(data: _latestScores ?? <String, dynamic>{}, description: _overviewDescription ?? '')),
+                        // DASS-21 tab
+                        Padding(padding: const EdgeInsets.all(8.0), child: Dass21Chart(history: _dassHistory, description: _dassDescription ?? '')),
+                        // PHQ-9 tab
+                        Padding(padding: const EdgeInsets.all(8.0), child: Phq9Chart(history: _phqHistory, description: _phqDescription ?? '')),
+                        // GAD-7 tab
+                        Padding(padding: const EdgeInsets.all(8.0), child: Gad7Chart(history: _gadHistory, description: _gadDescription ?? '')),
+                        // Daily check-in tab uses existing MoodEnergyChart
+                        Card(
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                const Text(
+                                  'Last 7 Days Mood and Energy',
+                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: const <Widget>[
+                                    _LegendDot(color: AppColors.primaryRed, label: 'Mood'),
+                                    SizedBox(width: 12),
+                                    _LegendDot(color: Color(0xFF0288D1), label: 'Energy'),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Expanded(
+                                  child: _last7Mood.isEmpty && _last7Energy.isEmpty
+                                      ? Center(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: <Widget>[
+                                              const Icon(Icons.edit_calendar_outlined, size: 48, color: Colors.grey),
+                                              const SizedBox(height: 8),
+                                              const Text('No check-in data for the past 7 days', style: TextStyle(fontSize: 16)),
+                                              const SizedBox(height: 6),
+                                              const Text('Complete your daily check-ins to track your mood and energy trends', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                                              const SizedBox(height: 12),
+                                              ElevatedButton(onPressed: () => context.go('/esm'), child: const Text('Check In Now')),
+                                            ],
+                                          ),
+                                        )
+                                      : MoodEnergyChart(moodValues: _last7Mood, energyValues: _last7Energy, dayLabels: _dayLabels),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-                    MoodEnergyChart(
-                      moodValues: _last7Mood,
-                      energyValues: _last7Energy,
-                      dayLabels: _dayLabels,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 12),
