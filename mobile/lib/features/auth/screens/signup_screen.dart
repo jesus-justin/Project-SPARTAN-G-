@@ -19,6 +19,26 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  static const List<String> _collegeOptions = <String>[
+    'CICS',
+    'COE',
+    'CIT',
+    'CAS',
+    'COED',
+    'CBA',
+    'CAFA',
+    'CTHM',
+  ];
+  static const List<String> _yearLevelOptions = <String>[
+    '1st Year',
+    '2nd Year',
+    '3rd Year',
+    '4th Year',
+    '5th Year',
+  ];
+
+  String _selectedCollege = _collegeOptions.first;
+  String _selectedYearLevel = _yearLevelOptions.first;
 
   @override
   void dispose() {
@@ -39,7 +59,8 @@ class _SignupScreenState extends State<SignupScreen> {
       'password': _passwordController.text,
       'firstName': _nameController.text.trim(),
       'lastName': _nameController.text.trim(),
-      'yearLevel': '1',
+      'college': _selectedCollege,
+      'yearLevel': _selectedYearLevel,
     };
 
     try {
@@ -117,6 +138,66 @@ class _SignupScreenState extends State<SignupScreen> {
                   validator: (String? value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Enter your Student ID.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedCollege,
+                  decoration: const InputDecoration(
+                    labelText: 'College',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _collegeOptions
+                      .map(
+                        (String value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (String? value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedCollege = value;
+                    });
+                  },
+                  validator: (String? value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select your college.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedYearLevel,
+                  decoration: const InputDecoration(
+                    labelText: 'Year Level',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _yearLevelOptions
+                      .map(
+                        (String value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (String? value) {
+                    if (value == null) {
+                      return;
+                    }
+                    setState(() {
+                      _selectedYearLevel = value;
+                    });
+                  },
+                  validator: (String? value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select your year level.';
                     }
                     return null;
                   },
