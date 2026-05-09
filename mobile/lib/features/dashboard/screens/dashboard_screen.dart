@@ -23,6 +23,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<String> _dayLabels = <String>['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
   String _riskLevel = 'Unknown';
+  Map<String, dynamic>? _latestScores;
+  Map<String, dynamic>? _rolling7;
+  List<dynamic> _riskHistory = <dynamic>[];
   bool _hasShownCrisisSheet = false;
 
   @override
@@ -37,16 +40,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final dynamic resp = await api.get('/student/dashboard');
       if (resp is Map<String, dynamic> && resp['data'] != null) {
         final data = resp['data'];
-        final String name = data['name']?.toString() ?? '';
-        final String risk = data['riskLevel']?.toString() ?? data['risk_level']?.toString() ?? 'Unknown';
-        final List<dynamic> esm = data['esm'] is List ? List<dynamic>.from(data['esm']) : [];
+        final student = data['student'] ?? {};
+        final String name = (student['name'] ?? '').toString();
+        final String risk = data['currentRisk']?.toString() ?? 'Unknown';
+        final List<dynamic> esm = (data['esmData'] != null && data['esmData']['last7Days'] is List) ? List<dynamic>.from(data['esmData']['last7Days']) : [];
+        final rolling7 = data['esmData'] != null ? data['esmData']['rollingAverage7d'] : null;
+        final latestScores = data['latestScores'] ?? null;
+        final List<dynamic> riskHistory = data['riskHistory'] is List ? List<dynamic>.from(data['riskHistory']) : [];
 
         setState(() {
           _riskLevel = risk;
+          _latestScores = latestScores;
+          _rolling7 = rolling7 is Map ? Map<String, dynamic>.from(rolling7) : null;
+          _riskHistory = riskHistory;
           if (esm.isNotEmpty) {
             _last7Mood = esm.map<double>((e) => (e['mood'] as num).toDouble()).toList();
             _last7Energy = esm.map<double>((e) => (e['energy'] as num).toDouble()).toList();
-            _dayLabels = List<String>.generate(_last7Mood.length, (index) => '${index + 1}');
+            _dayLabels = esm.map<String>((e) {
+              try {
+                final d = DateTime.parse(e['date'].toString());
+                return _formatDayLabel(d);
+              } catch (_) {
+                return e['date']?.toString() ?? '';
+              }
+            }).toList();
+            // ensure max 7 points
+            if (_last7Mood.length > 7) {
+              _last7Mood = _last7Mood.sublist(_last7Mood.length - 7);
+            }
+            if (_last7Energy.length > 7) {
+              _last7Energy = _last7Energy.sublist(_last7Energy.length - 7);
+            }
+            if (_dayLabels.length > 7) {
+              _dayLabels = _dayLabels.sublist(_dayLabels.length - 7);
+            }
+            // summary averages
+            if (rolling7 != null) {
+              // stored for summary cards
+            }
           }
         });
 
@@ -69,6 +100,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } catch (_) {
       // ignore
     }
+  }
+
+  String _formatDayLabel(DateTime d) {
+    const List<String> names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return names[d.weekday % 7];
+  }
+
+  double _computeAvg(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    final double sum = values.reduce((a, b) => a + b);
+    return sum / values.length;
+  }
+
+  String _computeRiskDirection() {
+    if (_riskHistory.isEmpty) return 'Stable';
+    if (_riskHistory.length < 2) return 'Stable';
+    final String current = _riskHistory.isNotEmpty ? _riskHistory[0]['riskLevel'] : _riskLevel;
+    final String previous = _riskHistory.length > 1 ? _riskHistory[1]['riskLevel'] : current;
+    const order = ['Unknown', 'Low', 'Moderate', 'High', 'Crisis'];
+    final int ci = order.indexOf(current);
+    final int pi = order.indexOf(previous);
+    if (ci > pi) return 'Worsening';
+    if (ci < pi) return 'Improving';
+    return 'Stable';
   }
 
   @override
@@ -148,7 +203,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            // Summary cards row
+            if (_last7Mood.isNotEmpty) Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text('7-Day Average', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
+                            Text('Mood: ${_computeAvg(_last7Mood).toStringAsFixed(1)}'),
+                            Text('Energy: ${_computeAvg(_last7Energy).toStringAsFixed(1)}'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text('Latest Scores', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
+                            Text('DASS-21: ${_latestScores?['dass21'] != null ? _latestScores!['dass21']['depression']['severity'] : 'N/A'}'),
+                            Text('PHQ-9: ${_latestScores?['phq9'] != null ? '${_latestScores!['phq9']['totalScore']}/27 (${_latestScores!['phq9']['severity']})' : 'N/A'}'),
+                            Text('GAD-7: ${_latestScores?['gad7'] != null ? '${_latestScores!['gad7']['totalScore']}/21 (${_latestScores!['gad7']['severity']})' : 'N/A'}'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const Text('Risk Trend', style: TextStyle(fontWeight: FontWeight.w700)),
+                            const SizedBox(height: 6),
+                            Text('Current: $_riskLevel'),
+                            Text('Previous: ${_riskHistory.isNotEmpty && _riskHistory.length>1 ? _riskHistory[1]['riskLevel'] : 'N/A'}'),
+                            Text('Direction: ${_computeRiskDirection()}'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ) else Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12.0),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: Text(
+                      'No check-in data yet. Complete your daily check-ins.',
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             SizedBox(
               width: double.infinity,
               child: FilledButton(

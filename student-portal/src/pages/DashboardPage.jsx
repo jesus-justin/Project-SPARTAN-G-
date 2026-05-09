@@ -24,9 +24,10 @@ export default function DashboardPage() {
 
         if (dashboardRes.status === 'fulfilled') {
           const data = dashboardRes.value.data?.data || {};
-          setDisplayName(normalizeDisplayName(data.name || buildUserName(user)));
-          setRiskLevel(data.riskLevel || data.risk_level || 'Unknown');
-          setEsmEntries(data.esm || []);
+          const student = data.student || {};
+          setDisplayName(normalizeDisplayName(student.name || buildUserName(user)));
+          setRiskLevel(data.currentRisk || 'Unknown');
+          setEsmEntries((data.esmData && data.esmData.last7Days) ? data.esmData.last7Days : []);
         } else {
           setDisplayName(normalizeDisplayName(buildUserName(user)));
         }

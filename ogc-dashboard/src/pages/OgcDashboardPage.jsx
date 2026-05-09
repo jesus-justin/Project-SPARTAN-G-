@@ -52,6 +52,8 @@ export default function OgcDashboardPage() {
     return () => clearInterval(id);
   }, []);
 
+  const [populationTab, setPopulationTab] = useState('descriptive');
+
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.acknowledged).length,
     [notifications]
@@ -133,10 +135,73 @@ export default function OgcDashboardPage() {
       {/* Population Overview Tab */}
       {activeTab === 'population' && (
         <div>
-          {populationData ? (
-            <PopulationDashboard data={populationData} />
-          ) : (
-            <p style={{ color: '#999' }}>Loading population data...</p>
+          <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+            <button onClick={() => setPopulationTab('descriptive')} style={{ padding: '8px 12px', background: populationTab === 'descriptive' ? '#d32f2f' : '#eee', color: populationTab === 'descriptive' ? '#fff' : '#333', border: 'none', borderRadius: 6 }}>Descriptive</button>
+            <button onClick={() => setPopulationTab('predictive')} style={{ padding: '8px 12px', background: populationTab === 'predictive' ? '#d32f2f' : '#eee', color: populationTab === 'predictive' ? '#fff' : '#333', border: 'none', borderRadius: 6 }}>Predictive</button>
+            <button onClick={() => setPopulationTab('prescriptive')} style={{ padding: '8px 12px', background: populationTab === 'prescriptive' ? '#d32f2f' : '#eee', color: populationTab === 'prescriptive' ? '#fff' : '#333', border: 'none', borderRadius: 6 }}>Prescriptive</button>
+          </div>
+
+          {populationTab === 'descriptive' && (
+            populationData ? (
+              <PopulationDashboard data={populationData} />
+            ) : (
+              <p style={{ color: '#999' }}>Loading population data...</p>
+            )
+          )}
+
+          {populationTab === 'predictive' && (
+            <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #ddd' }}>
+              <h3 style={{ marginTop: 0 }}>Top SHAP Drivers (recent notifications)</h3>
+              {notifications.length === 0 ? (
+                <p style={{ color: '#777' }}>No recent notifications</p>
+              ) : (
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {Object.entries(
+                    notifications.reduce((acc, n) => {
+                      const drivers = n.shapDrivers || [];
+                      drivers.forEach((d) => {
+                        const key = d.feature;
+                        acc[key] = acc[key] || { feature: d.feature, value: 0, impact: d.impact || 'LOW' };
+                        acc[key].value += d.value || 0;
+                      });
+                      return acc;
+                    }, {})
+                  ).map(([k, v]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{v.feature}</div>
+                        <div style={{ color: '#666', fontSize: 13 }}>{v.impact || ''}</div>
+                      </div>
+                      <div style={{ fontWeight: 700 }}>{Math.round(v.value)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {populationTab === 'prescriptive' && (
+            <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #ddd' }}>
+              <h3 style={{ marginTop: 0 }}>Intervention Recommendations</h3>
+              <div style={{ display: 'grid', gap: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 700 }}>Crisis</div>
+                  <div style={{ color: '#666' }}>Immediate intervention required. Reveal identity and contact student.</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>High</div>
+                  <div style={{ color: '#666' }}>Schedule appointment within 24 hours. Recommend DASS-21 repeat in 3 days.</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>Moderate</div>
+                  <div style={{ color: '#666' }}>Monitor for 7 days. Send wellness resources automatically.</div>
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700 }}>Low</div>
+                  <div style={{ color: '#666' }}>Continue monitoring. No action required.</div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       )}

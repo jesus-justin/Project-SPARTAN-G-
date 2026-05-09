@@ -22,7 +22,7 @@ class MoodEnergyChart extends StatelessWidget {
       child: LineChart(
         LineChartData(
           minY: 0,
-          maxY: 5,
+          maxY: 10,
           gridData: const FlGridData(show: true),
           borderData: FlBorderData(show: false),
           titlesData: FlTitlesData(
@@ -36,6 +36,7 @@ class MoodEnergyChart extends StatelessWidget {
                   value.toInt().toString(),
                   style: const TextStyle(fontSize: 12),
                 ),
+                interval: 2,
               ),
             ),
             bottomTitles: AxisTitles(
@@ -94,6 +95,18 @@ class MoodEnergyChart extends StatelessWidget {
                 (int i) => FlSpot(i.toDouble(), energyValues[i]),
               ),
               dotData: const FlDotData(show: true),
+            ),
+            // baseline placeholder (if moodValues present)
+            if (moodValues.isNotEmpty) LineChartBarData(
+              isCurved: false,
+              barWidth: 1,
+              color: Colors.grey.withOpacity(0.9),
+              dashArray: [5, 5],
+              spots: [
+                FlSpot(0, moodValues.reduce((a, b) => a + b) / moodValues.length),
+                FlSpot((moodValues.length - 1).toDouble(), moodValues.reduce((a, b) => a + b) / moodValues.length),
+              ],
+              dotData: const FlDotData(show: false),
             ),
           ],
         ),
