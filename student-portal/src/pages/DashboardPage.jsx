@@ -1,30 +1,52 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getRecentEsm } from '../api/assessment.api';
+import client from '../api/client';
 import MoodEnergyChart from '../components/MoodEnergyChart';
 import RiskBadge from '../components/RiskBadge';
 import CrisisAlert from '../components/CrisisAlert';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage() {
   const [esmEntries, setEsmEntries] = useState([]);
-  const [riskLevel, setRiskLevel] = useState('Low');
-  const [trajectory, setTrajectory] = useState('Stable');
+  const [riskLevel, setRiskLevel] = useState('Unknown');
+  const [trajectory, setTrajectory] = useState('Unknown');
+  const [displayName, setDisplayName] = useState('Student');
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     async function load() {
       try {
-        const esmRes = await getRecentEsm(7);
-        setEsmEntries(esmRes.data || []);
+        const [dashboardRes, trajectoryRes] = await Promise.allSettled([
+          client.get('/student/dashboard'),
+          client.get('/student/trajectory'),
+        ]);
+
+        if (dashboardRes.status === 'fulfilled') {
+          const data = dashboardRes.value.data?.data || {};
+          setDisplayName(normalizeDisplayName(data.name || buildUserName(user)));
+          setRiskLevel(data.riskLevel || data.risk_level || 'Unknown');
+          setEsmEntries(data.esm || []);
+        } else {
+          setDisplayName(normalizeDisplayName(buildUserName(user)));
+        }
+
+        if (trajectoryRes.status === 'fulfilled') {
+          const data = trajectoryRes.value.data?.data || {};
+          setTrajectory(data.trajectory || 'Unknown');
+        }
       } catch {
         setEsmEntries([]);
+        setDisplayName(normalizeDisplayName(buildUserName(user)));
       }
     }
 
     load();
-  }, []);
+  }, [user]);
 
   const latest = useMemo(() => (esmEntries.length ? esmEntries[0] : null), [esmEntries]);
+
+  const showUnknownRiskMessage = !riskLevel || riskLevel === 'Unknown';
 
   const getTrajectoryColor = () => {
     switch (trajectory) {
@@ -43,7 +65,7 @@ export default function DashboardPage() {
 
   return (
     <div style={{ maxWidth: 980, margin: '24px auto', padding: 16 }}>
-      <h2 style={{ marginBottom: 8 }}>Wellbeing Dashboard</h2>
+      <h2 style={{ marginBottom: 8 }}>Welcome, {displayName}</h2>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
         <span>Current Risk:</span>
         <RiskBadge level={riskLevel} />
@@ -60,6 +82,12 @@ export default function DashboardPage() {
           {trajectory}
         </span>
       </div>
+
+      {showUnknownRiskMessage && (
+        <p style={{ marginTop: -4, marginBottom: 12, color: '#757575', fontStyle: 'italic' }}>
+          Complete your assessments to see your risk level
+        </p>
+      )}
 
       {riskLevel === 'Crisis' && <CrisisAlert />}
 
@@ -97,7 +125,7 @@ export default function DashboardPage() {
           onClick={() => navigate('/phq9')}
           style={{
             padding: '12px',
-            background: '#1976d2',
+            background: '#1565C0',
             color: '#fff',
             border: 'none',
             borderRadius: 6,
@@ -112,7 +140,7 @@ export default function DashboardPage() {
           onClick={() => navigate('/gad7')}
           style={{
             padding: '12px',
-            background: '#7b1fa2',
+            background: '#6A1B9A',
             color: '#fff',
             border: 'none',
             borderRadius: 6,
@@ -171,4 +199,39 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+function buildUserName(user) {
+  if (!user) {
+    return 'Student';
+  }
+
+  const direct = user.name || user.fullName || user.full_name;
+  if (typeof direct === 'string' && direct.trim()) {
+    return direct;
+  }
+
+  const firstName = user.first_name || user.firstName || '';
+  const lastName = user.last_name || user.lastName || '';
+  const combined = `${firstName} ${lastName}`.trim();
+  return combined || 'Student';
+}
+
+function normalizeDisplayName(value) {
+  const normalized = String(value || '').trim().replace(/\s+/g, ' ');
+  if (!normalized) {
+    return 'Student';
+  }
+
+  const parts = normalized.split(' ');
+  if (parts.length % 2 === 0) {
+    const half = parts.length / 2;
+    const firstHalf = parts.slice(0, half);
+    const secondHalf = parts.slice(half);
+    if (firstHalf.join(' ').toLowerCase() === secondHalf.join(' ').toLowerCase()) {
+      return firstHalf.join(' ');
+    }
+  }
+
+  return normalized;
 }

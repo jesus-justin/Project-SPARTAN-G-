@@ -29,7 +29,7 @@ class AuthProvider extends ChangeNotifier {
       _isAuthenticated = _token != null && _token!.isNotEmpty;
       final String? savedName = await StorageService.getString('student_name');
       if (savedName != null && savedName.isNotEmpty) {
-        _studentName = savedName;
+        _studentName = _normalizeDisplayName(savedName);
       }
       _errorMessage = null;
     } finally {
@@ -55,7 +55,7 @@ class AuthProvider extends ChangeNotifier {
         final Map<String, dynamic> data = Map<String, dynamic>.from(response['data']);
         final String? jwt = data['token']?.toString();
         final Map<String, dynamic>? user = data['user'] is Map<String, dynamic> ? Map<String, dynamic>.from(data['user']) : null;
-        final String? name = user != null ? '${user['firstName'] ?? user['first_name'] ?? ''} ${user['lastName'] ?? user['last_name'] ?? ''}'.trim() : null;
+        final String? name = _resolveDisplayName(user);
 
         if (jwt == null || jwt.isEmpty) {
           _errorMessage = 'No token received from server.';
@@ -64,8 +64,8 @@ class AuthProvider extends ChangeNotifier {
 
         await StorageService.saveToken(jwt);
         if (name != null && name.isNotEmpty) {
-          _studentName = name;
-          await StorageService.setString('student_name', name);
+          _studentName = _normalizeDisplayName(name);
+          await StorageService.setString('student_name', _studentName);
         }
 
         _token = jwt;
@@ -106,6 +106,64 @@ class AuthProvider extends ChangeNotifier {
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
+  }
+
+  String? _resolveDisplayName(Map<String, dynamic>? user) {
+    if (user == null) {
+      return null;
+    }
+
+    final String? directName = _stringValue(user['name']) ?? _stringValue(user['fullName']) ?? _stringValue(user['full_name']);
+    if (directName != null && directName.isNotEmpty) {
+      return _normalizeDisplayName(directName);
+    }
+
+    final String firstName = _stringValue(user['firstName']) ?? _stringValue(user['first_name']) ?? '';
+    final String lastName = _stringValue(user['lastName']) ?? _stringValue(user['last_name']) ?? '';
+
+    if (firstName.isNotEmpty && lastName.isNotEmpty) {
+      if (firstName == lastName) {
+        return _normalizeDisplayName(firstName);
+      }
+      return _normalizeDisplayName('$firstName $lastName');
+    }
+
+    return _normalizeDisplayName(firstName.isNotEmpty ? firstName : lastName);
+  }
+
+  String _normalizeDisplayName(String value) {
+    final String normalized = value.trim().replaceAll(RegExp(r'\s+'), ' ');
+    final List<String> parts = normalized.split(' ');
+
+    if (parts.length.isEven) {
+      final int half = parts.length ~/ 2;
+      final List<String> firstHalf = parts.sublist(0, half);
+      final List<String> secondHalf = parts.sublist(half);
+      if (_listsEqualIgnoreCase(firstHalf, secondHalf)) {
+        return firstHalf.join(' ');
+      }
+    }
+
+    return normalized;
+  }
+
+  bool _listsEqualIgnoreCase(List<String> left, List<String> right) {
+    if (left.length != right.length) {
+      return false;
+    }
+
+    for (int index = 0; index < left.length; index += 1) {
+      if (left[index].toLowerCase() != right[index].toLowerCase()) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  String? _stringValue(dynamic value) {
+    final String text = value?.toString().trim() ?? '';
+    return text.isEmpty ? null : text;
   }
 
   String _friendlyLoginErrorMessage(ApiException error) {

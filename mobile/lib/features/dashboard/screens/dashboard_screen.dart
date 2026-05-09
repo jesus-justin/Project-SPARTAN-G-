@@ -108,6 +108,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 8),
             RiskBadgeWidget(riskLevel: _riskLevel),
+            if (_riskLevel == 'Unknown' || _riskLevel.isEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              const Text(
+                'Complete your assessments to see your risk level',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
             Card(
               color: Colors.white,
@@ -151,6 +161,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1565C0),
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () => context.go('/phq9'),
+                child: const Text(
+                  'Take PHQ-9',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6A1B9A),
+                  minimumSize: const Size(double.infinity, 50),
+                ),
+                onPressed: () => context.go('/gad7'),
+                child: const Text(
+                  'Take GAD-7',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
