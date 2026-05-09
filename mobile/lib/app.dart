@@ -9,7 +9,6 @@ import 'core/services/api_service.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
 import 'features/consent/screens/consent_screen.dart';
-import 'features/cssrs/screens/cssrs_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/dass21/screens/dass21_screen.dart';
 import 'features/esm/screens/esm_checkin_screen.dart';
@@ -87,10 +86,6 @@ class _SpartanGAppState extends State<SpartanGApp> {
         GoRoute(
           path: '/dass21',
           builder: (BuildContext context, GoRouterState state) => const Dass21Screen(),
-        ),
-        GoRoute(
-          path: '/cssrs',
-          builder: (BuildContext context, GoRouterState state) => const CssrsScreen(),
         ),
         GoRoute(
           path: '/esm',

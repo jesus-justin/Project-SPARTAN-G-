@@ -161,14 +161,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton(
-                onPressed: () => context.go('/cssrs'),
-                child: const Text('View Results'),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: double.infinity,
               child: FilledButton(
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.green,

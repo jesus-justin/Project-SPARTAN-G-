@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getLatestCssrs, getRecentEsm } from '../api/assessment.api';
+import { getRecentEsm } from '../api/assessment.api';
 import MoodEnergyChart from '../components/MoodEnergyChart';
 import RiskBadge from '../components/RiskBadge';
 import CrisisAlert from '../components/CrisisAlert';
@@ -14,16 +14,8 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const [esmRes, cssrsRes] = await Promise.allSettled([getRecentEsm(7), getLatestCssrs()]);
-
-        if (esmRes.status === 'fulfilled') {
-          setEsmEntries(esmRes.value.data || []);
-        }
-
-        if (cssrsRes.status === 'fulfilled') {
-          setRiskLevel(cssrsRes.value.data?.risk_level || 'Low');
-          setTrajectory(cssrsRes.value.data?.trajectory || 'Stable');
-        }
+        const esmRes = await getRecentEsm(7);
+        setEsmEntries(esmRes.data || []);
       } catch {
         setEsmEntries([]);
       }

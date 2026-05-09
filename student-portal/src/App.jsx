@@ -5,7 +5,6 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ConsentPage from './pages/ConsentPage';
 import Dass21Page from './pages/Dass21Page';
-import CssrsPage from './pages/CssrsPage';
 import EsmCheckinPage from './pages/EsmCheckinPage';
 import DashboardPage from './pages/DashboardPage';
 import Phq9Page from './pages/Phq9Page';
@@ -72,14 +71,6 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Gad7Page />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/cssrs"
-          element={
-            <ProtectedRoute>
-              <CssrsPage />
             </ProtectedRoute>
           }
         />

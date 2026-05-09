@@ -1,3 +1,9 @@
+/**
+ * DEPRECATED: C-SSRS Lite removed from student-facing UI.
+ * Backend routes kept intact for data integrity only.
+ * Do NOT delete this file or cssrs_responses table.
+ */
+
 import { query } from '../config/db.js';
 import { evaluateCssrs } from '../services/cssrs.service.js';
 
