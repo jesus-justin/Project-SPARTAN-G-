@@ -8,43 +8,31 @@ export async function getPopulationDashboard(req, res, next) {
       return res.status(403).json({ success: false, message: 'Facilitator access required' });
     }
 
-    const byCollegeRes = await query(
-      `SELECT 'Unknown' AS college, COUNT(*) as count
-       FROM users
-       WHERE role = 'student'`,
-      []
-    );
+    const riskLevels = ['Low', 'Moderate', 'High', 'Crisis'];
+    const emptyRiskCounts = () => ({ Low: 0, Moderate: 0, High: 0, Crisis: 0 });
 
-    const byYearRes = await query(
-      `SELECT COALESCE(year_level, 0) AS year_level, COUNT(*) as count
-       FROM users
-       WHERE role = 'student'
-       GROUP BY year_level
-       ORDER BY year_level ASC`,
-      []
-    );
+    function normalizeRiskLevel(level) {
+      return riskLevels.includes(level) ? level : 'Unknown';
+    }
 
     async function getWindowSummary(days) {
-      const dateThreshold = new Date();
-      dateThreshold.setDate(dateThreshold.getDate() - days);
-
-      const rows = await query(
+      const result = await query(
         `SELECT rc.risk_level, COUNT(*) AS count
          FROM risk_classifications rc
          INNER JOIN (
            SELECT user_id, MAX(created_at) AS latest_created_at
            FROM risk_classifications
-           WHERE created_at >= $1
+           WHERE created_at >= DATE_SUB(NOW(), INTERVAL ${days} DAY)
            GROUP BY user_id
          ) latest ON latest.user_id = rc.user_id AND latest.latest_created_at = rc.created_at
          GROUP BY rc.risk_level`,
-        [dateThreshold]
+        []
       );
 
-      const out = { Low: 0, Moderate: 0, High: 0, Crisis: 0 };
-      for (const row of rows.rows) {
-        const level = String(row.risk_level || '').trim();
-        if (Object.prototype.hasOwnProperty.call(out, level)) {
+      const out = emptyRiskCounts();
+      for (const row of result.rows) {
+        const level = normalizeRiskLevel(String(row.risk_level || '').trim());
+        if (level !== 'Unknown') {
           out[level] = Number(row.count || 0);
         }
       }
@@ -52,19 +40,105 @@ export async function getPopulationDashboard(req, res, next) {
       return out;
     }
 
+    async function getCohortSummary(groupField, selectExpression) {
+      const result = await query(
+        `SELECT ${selectExpression} AS cohort,
+                SUM(CASE WHEN rc.risk_level = 'Low' THEN 1 ELSE 0 END) AS Low,
+                SUM(CASE WHEN rc.risk_level = 'Moderate' THEN 1 ELSE 0 END) AS Moderate,
+                SUM(CASE WHEN rc.risk_level = 'High' THEN 1 ELSE 0 END) AS High,
+                SUM(CASE WHEN rc.risk_level = 'Crisis' THEN 1 ELSE 0 END) AS Crisis
+         FROM risk_classifications rc
+         INNER JOIN (
+           SELECT user_id, MAX(created_at) AS latest_created_at
+           FROM risk_classifications
+           GROUP BY user_id
+         ) latest ON latest.user_id = rc.user_id AND latest.latest_created_at = rc.created_at
+         INNER JOIN users u ON u.id = rc.user_id
+         WHERE u.role = 'student'
+         GROUP BY cohort
+         ORDER BY cohort ASC`,
+        []
+      );
+
+      return result.rows.map((row) => ({
+        [groupField]: row.cohort,
+        Low: Number(row.Low || 0),
+        Moderate: Number(row.Moderate || 0),
+        High: Number(row.High || 0),
+        Crisis: Number(row.Crisis || 0),
+      }));
+    }
+
     const summary7d = await getWindowSummary(7);
     const summary14d = await getWindowSummary(14);
     const summary30d = await getWindowSummary(30);
 
-    const byCollege = byCollegeRes.rows.map((row) => ({
-      college: row.college,
-      count: Number(row.count || 0),
-    }));
+    const byCollege = await getCohortSummary('college', "COALESCE(NULLIF(TRIM(u.college), ''), 'Unknown')");
+    const byYearLevel = await getCohortSummary('yearLevel', "COALESCE(CAST(u.year_level AS CHAR), 'Unknown')");
+    const bySex = await getCohortSummary('sex', "COALESCE(NULLIF(UPPER(TRIM(u.sex)), ''), 'Unknown')");
 
-    const byYearLevel = byYearRes.rows.map((row) => ({
-      yearLevel: Number(row.year_level || 0),
-      count: Number(row.count || 0),
-    }));
+    const totalStudentsMonitoredRes = await query(
+      `SELECT COUNT(DISTINCT rc.user_id) AS count
+       FROM risk_classifications rc
+       INNER JOIN users u ON u.id = rc.user_id
+       WHERE u.role = 'student'`,
+      []
+    );
+
+    const totalAssessmentsThisMonthRes = await query(
+      `SELECT COUNT(*) AS count
+       FROM risk_classifications rc
+       INNER JOIN users u ON u.id = rc.user_id
+       WHERE u.role = 'student'
+         AND rc.created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')`,
+      []
+    );
+
+    const shapRowsRes = await query(
+      `SELECT rc.shap_drivers
+       FROM risk_classifications rc
+       INNER JOIN (
+         SELECT user_id, MAX(created_at) AS latest_created_at
+         FROM risk_classifications
+         GROUP BY user_id
+       ) latest ON latest.user_id = rc.user_id AND latest.latest_created_at = rc.created_at
+       WHERE rc.shap_drivers IS NOT NULL`,
+      []
+    );
+
+    const impactRank = { LOW: 1, MODERATE: 2, HIGH: 3 };
+    const impactByFeature = new Map();
+
+    for (const row of shapRowsRes.rows || []) {
+      let drivers = [];
+      try {
+        drivers = Array.isArray(row.shap_drivers) ? row.shap_drivers : JSON.parse(row.shap_drivers || '[]');
+      } catch {
+        drivers = [];
+      }
+
+      for (const driver of drivers) {
+        const feature = String(driver.feature || 'Unknown').trim();
+        const impact = String(driver.impact || 'LOW').toUpperCase();
+        const current = impactByFeature.get(feature) || { feature, impactScoreSum: 0, count: 0 };
+        current.impactScoreSum += impactRank[impact] || 1;
+        current.count += 1;
+        impactByFeature.set(feature, current);
+      }
+    }
+
+    const topShapDrivers = [...impactByFeature.values()]
+      .map((item) => {
+        const avgScore = item.count > 0 ? item.impactScoreSum / item.count : 0;
+        const avgImpact = avgScore >= 2.5 ? 'HIGH' : avgScore >= 1.5 ? 'MODERATE' : 'LOW';
+        return {
+          feature: item.feature,
+          avgImpact,
+          count: item.count,
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
 
     return res.json({
       success: true,
@@ -74,6 +148,10 @@ export async function getPopulationDashboard(req, res, next) {
         summary_30d: summary30d,
         byCollege,
         byYearLevel,
+        bySex,
+        topShapDrivers,
+        totalStudentsMonitored: Number(totalStudentsMonitoredRes.rows?.[0]?.count || 0),
+        totalAssessmentsThisMonth: Number(totalAssessmentsThisMonthRes.rows?.[0]?.count || 0),
       },
     });
   } catch (error) {

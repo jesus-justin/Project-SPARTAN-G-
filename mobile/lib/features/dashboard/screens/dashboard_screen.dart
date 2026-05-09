@@ -24,7 +24,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String _riskLevel = 'Unknown';
   Map<String, dynamic>? _latestScores;
-  Map<String, dynamic>? _rolling7;
   List<dynamic> _riskHistory = <dynamic>[];
   bool _hasShownCrisisSheet = false;
 
@@ -44,14 +43,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         final String name = (student['name'] ?? '').toString();
         final String risk = data['currentRisk']?.toString() ?? 'Unknown';
         final List<dynamic> esm = (data['esmData'] != null && data['esmData']['last7Days'] is List) ? List<dynamic>.from(data['esmData']['last7Days']) : [];
-        final rolling7 = data['esmData'] != null ? data['esmData']['rollingAverage7d'] : null;
-        final latestScores = data['latestScores'] ?? null;
+        final latestScores = data['latestScores'];
         final List<dynamic> riskHistory = data['riskHistory'] is List ? List<dynamic>.from(data['riskHistory']) : [];
 
         setState(() {
           _riskLevel = risk;
           _latestScores = latestScores;
-          _rolling7 = rolling7 is Map ? Map<String, dynamic>.from(rolling7) : null;
           _riskHistory = riskHistory;
           if (esm.isNotEmpty) {
             _last7Mood = esm.map<double>((e) => (e['mood'] as num).toDouble()).toList();
@@ -73,10 +70,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             }
             if (_dayLabels.length > 7) {
               _dayLabels = _dayLabels.sublist(_dayLabels.length - 7);
-            }
-            // summary averages
-            if (rolling7 != null) {
-              // stored for summary cards
             }
           }
         });

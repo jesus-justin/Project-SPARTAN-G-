@@ -135,6 +135,12 @@ export default function OgcDashboardPage() {
       {/* Population Overview Tab */}
       {activeTab === 'population' && (
         <div>
+          {populationData && (
+            <div style={{ marginBottom: 16, padding: 16, borderRadius: 12, background: 'linear-gradient(135deg, #fff, #fff5f5)', border: '1px solid #f1d4d4' }}>
+              <div style={{ color: '#666', fontSize: 13, fontWeight: 600 }}>Total students monitored</div>
+              <div style={{ fontSize: 30, fontWeight: 800, color: '#d32f2f' }}>{populationData.totalStudentsMonitored ?? 0}</div>
+            </div>
+          )}
           <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
             <button onClick={() => setPopulationTab('descriptive')} style={{ padding: '8px 12px', background: populationTab === 'descriptive' ? '#d32f2f' : '#eee', color: populationTab === 'descriptive' ? '#fff' : '#333', border: 'none', borderRadius: 6 }}>Descriptive</button>
             <button onClick={() => setPopulationTab('predictive')} style={{ padding: '8px 12px', background: populationTab === 'predictive' ? '#d32f2f' : '#eee', color: populationTab === 'predictive' ? '#fff' : '#333', border: 'none', borderRadius: 6 }}>Predictive</button>
