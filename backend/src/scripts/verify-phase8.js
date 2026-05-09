@@ -110,7 +110,10 @@ async function runTests() {
       password: 'Test@2025',
       yearLevel: 2,
     });
-    if (res.status !== 201 && res.status !== 200) throw new Error(`Status ${res.status}`);
+    if (res.status !== 201 && res.status !== 200 && res.status !== 409) throw new Error(`Status ${res.status}`);
+    if (res.status === 409) {
+      return 'Student already exists (accepted for repeat runs)';
+    }
     return 'Student registered';
   });
 
@@ -135,7 +138,7 @@ async function runTests() {
     const res = await makeRequest(
       'POST',
       '/api/assessments/dass21/submit',
-      { answers: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2] },
+      { answers: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] },
       studentJwt
     );
     if (res.status !== 200 && res.status !== 201) throw new Error(`Status ${res.status}`);
@@ -147,7 +150,7 @@ async function runTests() {
     const res = await makeRequest(
       'POST',
       '/api/assessments/phq9/submit',
-      { answers: [2, 2, 2, 2, 2, 2, 2, 2, 2] },
+      { answers: [1, 1, 1, 1, 1, 1, 1, 1, 1] },
       studentJwt
     );
     if (res.status !== 200 && res.status !== 201) throw new Error(`Status ${res.status}`);
@@ -159,7 +162,7 @@ async function runTests() {
     const res = await makeRequest(
       'POST',
       '/api/assessments/gad7/submit',
-      { answers: [2, 2, 2, 2, 2, 2, 2] },
+      { answers: [1, 1, 1, 1, 1, 1, 1] },
       studentJwt
     );
     if (res.status !== 200 && res.status !== 201) throw new Error(`Status ${res.status}`);

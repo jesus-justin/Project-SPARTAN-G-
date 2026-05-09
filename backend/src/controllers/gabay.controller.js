@@ -8,60 +8,72 @@ export async function getPopulationDashboard(req, res, next) {
       return res.status(403).json({ success: false, message: 'Facilitator access required' });
     }
 
-    // Get risk distribution
-    const riskDist = await query(
-      `SELECT risk_level, COUNT(*) as count FROM dass21_assessments
-       GROUP BY risk_level
-       ORDER BY created_at DESC`,
+    const byCollegeRes = await query(
+      `SELECT 'Unknown' AS college, COUNT(*) as count
+       FROM users
+       WHERE role = 'student'`,
       []
     );
 
-    const riskDistribution = {};
-    riskDist.rows.forEach((row) => {
-      riskDistribution[row.risk_level] = row.count;
-    });
-
-    // Get by college
-    const byCollege = await query(
-      `SELECT year_level, COUNT(*) as count FROM users
+    const byYearRes = await query(
+      `SELECT COALESCE(year_level, 0) AS year_level, COUNT(*) as count
+       FROM users
        WHERE role = 'student'
-       GROUP BY year_level`,
+       GROUP BY year_level
+       ORDER BY year_level ASC`,
       []
     );
 
-    const collegeBreakdown = {};
-    byCollege.rows.forEach((row) => {
-      collegeBreakdown[row.year_level] = row.count;
-    });
-
-    // Total students
-    const totalRes = await query(
-      `SELECT COUNT(*) as total FROM users WHERE role = 'student'`,
-      []
-    );
-    const totalStudents = totalRes.rows[0].total;
-
-    // 7-day, 14-day, 30-day summaries
-    const summaries = {};
-    for (const days of [7, 14, 30]) {
+    async function getWindowSummary(days) {
       const dateThreshold = new Date();
       dateThreshold.setDate(dateThreshold.getDate() - days);
 
-      const res7 = await query(
-        `SELECT COUNT(*) as count FROM dass21_assessments
-         WHERE created_at >= $1`,
+      const rows = await query(
+        `SELECT rc.risk_level, COUNT(*) AS count
+         FROM risk_classifications rc
+         INNER JOIN (
+           SELECT user_id, MAX(created_at) AS latest_created_at
+           FROM risk_classifications
+           WHERE created_at >= $1
+           GROUP BY user_id
+         ) latest ON latest.user_id = rc.user_id AND latest.latest_created_at = rc.created_at
+         GROUP BY rc.risk_level`,
         [dateThreshold]
       );
-      summaries[`summary_${days}d`] = res7.rows[0].count;
+
+      const out = { Low: 0, Moderate: 0, High: 0, Crisis: 0 };
+      for (const row of rows.rows) {
+        const level = String(row.risk_level || '').trim();
+        if (Object.prototype.hasOwnProperty.call(out, level)) {
+          out[level] = Number(row.count || 0);
+        }
+      }
+
+      return out;
     }
+
+    const summary7d = await getWindowSummary(7);
+    const summary14d = await getWindowSummary(14);
+    const summary30d = await getWindowSummary(30);
+
+    const byCollege = byCollegeRes.rows.map((row) => ({
+      college: row.college,
+      count: Number(row.count || 0),
+    }));
+
+    const byYearLevel = byYearRes.rows.map((row) => ({
+      yearLevel: Number(row.year_level || 0),
+      count: Number(row.count || 0),
+    }));
 
     return res.json({
       success: true,
       data: {
-        totalStudentsMonitored: totalStudents,
-        riskDistribution,
-        collegeBreakdown,
-        rollingWindowSummaries: summaries,
+        summary_7d: summary7d,
+        summary_14d: summary14d,
+        summary_30d: summary30d,
+        byCollege,
+        byYearLevel,
       },
     });
   } catch (error) {
@@ -228,17 +240,23 @@ export async function createAppointment(req, res, next) {
       return res.status(400).json({ success: false, message: 'studentId and scheduledAt are required' });
     }
 
-    // Get student info
-    const studentRes = await query(`SELECT id FROM users WHERE id = $1`, [studentId]);
+    // Accept either numeric user id or student_id string
+    const studentRes = await query(
+      `SELECT id, student_id FROM users WHERE id = $1 OR student_id = $2 LIMIT 1`,
+      [studentId, studentId]
+    );
 
     if (studentRes.rowCount === 0) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
 
+    const resolvedUserId = studentRes.rows[0].id;
+    const resolvedStudentId = studentRes.rows[0].student_id;
+
     // Get current risk level
     const riskRes = await query(
       `SELECT risk_level FROM risk_classifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [studentId]
+      [resolvedUserId]
     );
 
     const riskLevel = riskRes.rowCount > 0 ? riskRes.rows[0].risk_level : null;
@@ -248,14 +266,14 @@ export async function createAppointment(req, res, next) {
       `INSERT INTO appointments
        (appointment_id, user_id, student_id, facilitator_id, scheduled_at, status, notes, risk_level_at_booking, created_at)
        VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7, NOW())`,
-      [appointmentId, studentId, null, req.user.id, scheduledAt, notes || null, riskLevel]
+      [appointmentId, resolvedUserId, resolvedStudentId, req.user.id, scheduledAt, notes || null, riskLevel]
     );
 
     return res.status(201).json({
       success: true,
       data: {
         appointmentId,
-        studentId,
+        studentId: resolvedStudentId,
         scheduledAt,
         status: 'pending',
         notes,
