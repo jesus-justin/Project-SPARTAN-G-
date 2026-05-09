@@ -31,6 +31,7 @@ export default function Dass21Page() {
   const [page, setPage] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
   const pageSize = 7;
@@ -56,7 +57,8 @@ export default function Dass21Page() {
     setError('');
     try {
       await submitDass21(answers);
-      navigate('/dashboard');
+      setSuccess(true);
+      setTimeout(() => navigate('/dashboard'), 2000);
     } catch (err) {
       setError(err?.response?.data?.message || 'Failed to submit DASS-21');
     } finally {
@@ -66,6 +68,22 @@ export default function Dass21Page() {
 
   return (
     <div style={{ maxWidth: 880, margin: '24px auto', padding: 16 }}>
+      <button
+        onClick={() => navigate('/dashboard')}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: '#CC0000',
+          cursor: 'pointer',
+          fontSize: '14px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        ← Back to Dashboard
+      </button>
       <h2>DASS-21 Assessment</h2>
       <div style={{ height: 10, background: '#f1f1f1', borderRadius: 999, overflow: 'hidden', marginBottom: 14 }}>
         <div style={{ width: `${(answeredCount / 21) * 100}%`, height: '100%', background: '#CC0000' }} />
@@ -101,10 +119,23 @@ export default function Dass21Page() {
       </div>
 
       {error && <p style={{ color: '#D32F2F' }}>{error}</p>}
+      {success && (
+        <div style={{ marginTop: 12, padding: 12, background: '#e8f5e9', color: '#2e7d32', borderRadius: 6 }}>
+          Assessment submitted successfully. Redirecting to dashboard...
+          <div style={{ marginTop: 8 }}>
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{ background: '#CC0000', color: '#fff', border: 0, borderRadius: 8, padding: '8px 12px' }}
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        </div>
+      )}
 
       <button
         onClick={submit}
-        disabled={submitting}
+        disabled={submitting || success}
         style={{ marginTop: 14, background: '#CC0000', color: '#fff', border: 0, borderRadius: 8, padding: '10px 14px' }}
       >
         {submitting ? 'Submitting...' : 'Submit DASS-21'}

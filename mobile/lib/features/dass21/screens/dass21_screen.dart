@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/services/api_service.dart';
-import '../../dashboard/widgets/crisis_hotline_sheet.dart';
 
 class Dass21Screen extends StatefulWidget {
   const Dass21Screen({super.key});
@@ -49,20 +48,96 @@ class _Dass21ScreenState extends State<Dass21Screen> {
     }
   }
 
+  Future<void> _showExitDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('Exit Assessment?'),
+        content: const Text(
+          'Your progress will not be saved. Are you sure you want to exit?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Continue Assessment'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFCC0000),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.go('/dashboard');
+            },
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_questions.isEmpty) {
+      return PopScope(
+        canPop: false,
+        onPopInvoked: (bool didPop) {
+          if (!didPop) {
+            _showExitDialog();
+          }
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            title: const Text('DASS-21'),
+            leading: IconButton(
+              icon: const Icon(Icons.home),
+              tooltip: 'Back to Dashboard',
+              onPressed: () => context.go('/dashboard'),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: _showExitDialog,
+                child: const Text(
+                  'Exit',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
     final bool isLast = _currentIndex == _questions.length - 1;
     final int? selectedAnswer = _answers[_currentIndex];
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('DASS-21'),
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (!didPop) {
+          _showExitDialog();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('DASS-21'),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () => context.go('/dashboard'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: _showExitDialog,
+              child: const Text(
+                'Exit',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
         ),
-      ),
-      body: SafeArea(
+        body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -148,6 +223,7 @@ class _Dass21ScreenState extends State<Dass21Screen> {
             ],
           ),
         ),
+        ),
       ),
     );
   }
@@ -159,29 +235,38 @@ class _Dass21ScreenState extends State<Dass21Screen> {
       final dynamic resp = await api.post('/assessments/dass21', body: {'answers': answers});
       if (!mounted) return;
       if (resp is Map<String, dynamic> && resp['data'] != null) {
-        final String risk = resp['data']['riskLevel']?.toString() ?? resp['data']['risk_level']?.toString() ?? 'Unknown';
-        final Map<String, dynamic> scoring = resp['data']['scoring'] is Map ? Map<String, dynamic>.from(resp['data']['scoring']) : {};
-        // show result dialog
-        showDialog<void>(
+        final String riskLevel = resp['data']['riskLevel']?.toString() ?? resp['data']['risk_level']?.toString() ?? 'Unknown';
+        await showDialog<void>(
           context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: const Text('DASS-21 Result'),
-              content: Text('Risk level: $risk\nScoring: ${scoring.toString()}'),
-              actions: <Widget>[
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    if (risk == 'Crisis') {
-                      CrisisHotlineSheet.show(context);
-                    }
-                    context.go('/phq9');
-                  },
-                  child: const Text('Next: PHQ-9'),
-                ),
+          barrierDismissible: false,
+          builder: (BuildContext ctx) => AlertDialog(
+            title: const Text('Assessment Complete'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Icon(Icons.check_circle, color: Colors.green, size: 48),
+                const SizedBox(height: 16),
+                const Text('Your responses have been submitted.'),
+                const SizedBox(height: 8),
+                Text('Risk Level: $riskLevel'),
               ],
-            );
-          },
+            ),
+            actions: <Widget>[
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFCC0000),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  context.go('/dashboard');
+                },
+                child: const Text(
+                  'Go to Dashboard',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
         );
         return;
       }

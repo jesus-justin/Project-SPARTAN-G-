@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { submitPhq9, getPhq9Questions } from '../api/assessment.api';
 import RiskBadge from '../components/RiskBadge';
 import CrisisAlert from '../components/CrisisAlert';
@@ -11,6 +12,7 @@ export default function Phq9Page() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   const options = ['Not at all', 'Several days', 'More than half the days', 'Nearly every day'];
 
@@ -31,6 +33,18 @@ export default function Phq9Page() {
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (!result) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      navigate('/dashboard');
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [result, navigate]);
 
   const handleAnswer = (index, value) => {
     const newAnswers = [...answers];
@@ -76,6 +90,22 @@ export default function Phq9Page() {
   if (result) {
     return (
       <div style={{ maxWidth: 980, margin: '24px auto', padding: 16 }}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#CC0000',
+            cursor: 'pointer',
+            fontSize: '14px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          ← Back to Dashboard
+        </button>
         <h2 style={{ marginBottom: 20 }}>PHQ-9 Results</h2>
         <div style={{ background: '#fff', padding: 20, borderRadius: 8, border: '1px solid #ddd' }}>
           <div style={{ marginBottom: 20 }}>
@@ -93,10 +123,14 @@ export default function Phq9Page() {
 
           {result.riskLevel === 'Crisis' && <CrisisAlert />}
 
-          <div style={{ marginTop: 20 }}>
-            <a href="/dashboard" style={{ color: '#d32f2f', textDecoration: 'none', fontWeight: 600 }}>
-              ← Back to Dashboard
-            </a>
+          <div style={{ marginTop: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span style={{ color: '#2e7d32' }}>Redirecting to dashboard...</span>
+            <button
+              onClick={() => navigate('/dashboard')}
+              style={{ background: '#CC0000', color: '#fff', border: 0, borderRadius: 8, padding: '8px 12px' }}
+            >
+              Go to Dashboard
+            </button>
           </div>
         </div>
       </div>
@@ -114,6 +148,22 @@ export default function Phq9Page() {
 
   return (
     <div style={{ maxWidth: 800, margin: '24px auto', padding: 16 }}>
+      <button
+        onClick={() => navigate('/dashboard')}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: '#CC0000',
+          cursor: 'pointer',
+          fontSize: '14px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
+        ← Back to Dashboard
+      </button>
       <h2>PHQ-9 Depression Screening</h2>
 
       <div style={{ background: '#fff', padding: 20, borderRadius: 8, border: '1px solid #ddd', marginBottom: 20 }}>

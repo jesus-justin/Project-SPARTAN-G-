@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/services/api_service.dart';
 
@@ -19,6 +20,34 @@ class _EsmCheckinScreenState extends State<EsmCheckinScreen> {
 
   final List<String> _stressors = <String>['None', 'Academic', 'Family', 'Relationship', 'Health', 'Other'];
 
+  Future<void> _showExitDialog() async {
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: const Text('Exit Assessment?'),
+        content: const Text(
+          'Your progress will not be saved. Are you sure you want to exit?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Continue Assessment'),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFCC0000),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.go('/dashboard');
+            },
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     setState(() => _submitting = true);
     try {
@@ -32,8 +61,38 @@ class _EsmCheckinScreenState extends State<EsmCheckinScreen> {
       });
 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Check-in submitted')));
-      Navigator.of(context).pop();
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext ctx) => AlertDialog(
+          title: const Text('Assessment Complete'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(Icons.check_circle, color: Colors.green, size: 48),
+              SizedBox(height: 16),
+              Text('Your responses have been submitted.'),
+              SizedBox(height: 8),
+              Text('Risk Level: Not evaluated in ESM check-in'),
+            ],
+          ),
+          actions: <Widget>[
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFCC0000),
+              ),
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.go('/dashboard');
+              },
+              child: const Text(
+                'Go to Dashboard',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Submission failed: $e')));
@@ -44,9 +103,32 @@ class _EsmCheckinScreenState extends State<EsmCheckinScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('ESM Daily Check-in')),
-      body: SafeArea(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (bool didPop) {
+        if (!didPop) {
+          _showExitDialog();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('ESM Daily Check-in'),
+          leading: IconButton(
+            icon: const Icon(Icons.home),
+            tooltip: 'Back to Dashboard',
+            onPressed: () => context.go('/dashboard'),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: _showExitDialog,
+              child: const Text(
+                'Exit',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+        body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -89,6 +171,7 @@ class _EsmCheckinScreenState extends State<EsmCheckinScreen> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
