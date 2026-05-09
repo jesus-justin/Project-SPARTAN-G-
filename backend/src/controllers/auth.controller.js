@@ -21,12 +21,30 @@ function buildToken(user) {
 
 export async function register(req, res, next) {
   try {
-    const { studentId, password, firstName, lastName, yearLevel } = req.body;
+    const { studentId, password, name, firstName, lastName, yearLevel } = req.body;
 
-    if (!studentId || !password || !firstName || !lastName) {
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedFirstName = typeof firstName === 'string' ? firstName.trim() : '';
+    const normalizedLastName = typeof lastName === 'string' ? lastName.trim() : '';
+
+    let resolvedFirstName = normalizedFirstName;
+    let resolvedLastName = normalizedLastName;
+
+    if ((!resolvedFirstName || !resolvedLastName) && normalizedName) {
+      const parts = normalizedName.split(/\s+/).filter(Boolean);
+      if (parts.length === 1) {
+        resolvedFirstName = parts[0];
+        resolvedLastName = parts[0];
+      } else {
+        resolvedFirstName = parts.shift();
+        resolvedLastName = parts.join(' ');
+      }
+    }
+
+    if (!studentId || !password || !resolvedFirstName || !resolvedLastName) {
       return res.status(400).json({
         success: false,
-        message: 'studentId, password, firstName, and lastName are required',
+        message: 'studentId, password, and either name or firstName/lastName are required',
       });
     }
 
@@ -42,7 +60,7 @@ export async function register(req, res, next) {
       `INSERT INTO users (student_id, password_hash, first_name, last_name, year_level)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING id, student_id, first_name, last_name, year_level, role, created_at`,
-      [studentId, passwordHash, firstName, lastName, yearLevel ?? null]
+      [studentId, passwordHash, resolvedFirstName, resolvedLastName, yearLevel ?? null]
     );
 
     const user = inserted.rows[0];
