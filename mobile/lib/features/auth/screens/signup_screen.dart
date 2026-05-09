@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -52,8 +54,31 @@ class _SignupScreenState extends State<SignupScreen> {
         }
       }
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign up failed')));
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sign up error: $e')));
+    } on ApiException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_friendlySignupErrorMessage(e))),
+      );
+    } on SocketException {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cannot connect to server. Make sure you are on the network.')),
+      );
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Server error. Please try again later.')),
+      );
+    }
+  }
+
+  String _friendlySignupErrorMessage(ApiException error) {
+    switch (error.statusCode) {
+      case 409:
+        return 'Student ID already exists. Please login instead.';
+      case 404:
+        return 'Student ID not found. Please sign up first.';
+      case 500:
+        return 'Server error. Please try again later.';
+      default:
+        return error.message.isNotEmpty ? error.message : 'Sign up failed';
     }
   }
 

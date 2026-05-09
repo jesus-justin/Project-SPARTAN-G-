@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 
 import '../services/api_service.dart';
@@ -75,7 +77,10 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = 'Invalid server response.';
       return false;
     } on ApiException catch (e) {
-      _errorMessage = e.message;
+      _errorMessage = _friendlyLoginErrorMessage(e);
+      return false;
+    } on SocketException {
+      _errorMessage = 'Cannot connect to server. Make sure you are on the network.';
       return false;
     } catch (_) {
       _errorMessage = 'Unable to log in. Please try again.';
@@ -101,5 +106,18 @@ class AuthProvider extends ChangeNotifier {
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();
+  }
+
+  String _friendlyLoginErrorMessage(ApiException error) {
+    switch (error.statusCode) {
+      case 401:
+        return 'Incorrect Student ID or password.';
+      case 404:
+        return 'Student ID not found. Please sign up first.';
+      case 500:
+        return 'Server error. Please try again later.';
+      default:
+        return error.message.isNotEmpty ? error.message : 'Unable to log in. Please try again.';
+    }
   }
 }

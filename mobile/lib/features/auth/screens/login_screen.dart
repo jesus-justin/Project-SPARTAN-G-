@@ -65,7 +65,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     }
 
-    final String message = authProvider.errorMessage ?? 'Login failed.';
+    final String message = (authProvider.errorMessage != null && authProvider.errorMessage!.trim().isNotEmpty)
+        ? authProvider.errorMessage!.trim()
+        : 'Unable to log in. Please try again.';
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
