@@ -21,6 +21,11 @@ app.use(
         return callback(null, true);
       }
 
+      // Allow local development origins with dynamic ports (Flutter web, Vite, etc.)
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+
       if (env.allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
