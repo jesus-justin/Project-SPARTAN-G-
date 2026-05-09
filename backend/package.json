@@ -7,6 +7,8 @@
   "scripts": {
     "setup": "node src/scripts/setup-db.js",
     "migrate": "node src/scripts/migrate-add-columns.js",
+    "cleanup": "node src/scripts/cleanup-test-users.js",
+    "refresh": "node src/scripts/refresh-db.js",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "test": "node src/scripts/smoke-test.js",

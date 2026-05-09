@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS dass21_assessments (
 );
 
 CREATE TABLE IF NOT EXISTS cssrs_assessments (
+  -- cssrs_assessments: DEPRECATED
+  -- C-SSRS removed from student UI in Phase 8
+  -- Table kept for historical data integrity only
+  -- Do NOT use for new assessments
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   item1 TINYINT(1) NOT NULL,

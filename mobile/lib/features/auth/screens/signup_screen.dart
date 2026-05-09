@@ -19,6 +19,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _programController = TextEditingController();
   static const List<String> _collegeOptions = <String>[
     'CICS',
     'COE',
@@ -36,15 +37,22 @@ class _SignupScreenState extends State<SignupScreen> {
     '4th Year',
     '5th Year',
   ];
+  static const List<String> _sexOptions = <String>[
+    'Male',
+    'Female',
+    'Prefer not to say',
+  ];
 
   String _selectedCollege = _collegeOptions.first;
   String _selectedYearLevel = _yearLevelOptions.first;
+  String? _selectedSex;
 
   @override
   void dispose() {
     _nameController.dispose();
     _studentIdController.dispose();
     _passwordController.dispose();
+    _programController.dispose();
     super.dispose();
   }
 
@@ -56,11 +64,12 @@ class _SignupScreenState extends State<SignupScreen> {
     final ApiService api = ApiService();
     final Map<String, dynamic> body = {
       'studentId': _studentIdController.text.trim(),
+      'name': _nameController.text.trim(),
       'password': _passwordController.text,
-      'firstName': _nameController.text.trim(),
-      'lastName': _nameController.text.trim(),
       'college': _selectedCollege,
       'yearLevel': _selectedYearLevel,
+      'program': _programController.text.trim().isEmpty ? null : _programController.text.trim(),
+      'sex': _selectedSex,
     };
 
     try {
@@ -200,6 +209,35 @@ class _SignupScreenState extends State<SignupScreen> {
                       return 'Please select your year level.';
                     }
                     return null;
+                  },
+                ),
+                const SizedBox(height: 14),
+                TextFormField(
+                  controller: _programController,
+                  decoration: const InputDecoration(
+                    labelText: 'Program (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedSex,
+                  decoration: const InputDecoration(
+                    labelText: 'Sex (optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: _sexOptions
+                      .map(
+                        (String value) => DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedSex = value;
+                    });
                   },
                 ),
                 const SizedBox(height: 14),
