@@ -16,7 +16,6 @@ const requiredTables = [
   'esm_checkins',
   'ginhawa_content',
   'ogc_notifications',
-  'cssrs_assessments',
 ];
 
 async function runMigration() {
@@ -72,9 +71,7 @@ async function verifyTablesAndPrintReport() {
 
     const count = await tableCount(tableName);
 
-    if (tableName === 'cssrs_assessments') {
-      console.log(`⚠️ cssrs_assessments - DEPRECATED (${count} rows)`);
-    } else if (tableName === 'users') {
+    if (tableName === 'users') {
       console.log(`✅ users table - OK (${count} rows)`);
     } else {
       console.log(`✅ ${tableName} - OK (${count} rows)`);
