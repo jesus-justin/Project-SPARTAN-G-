@@ -1,8 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_colors.dart';
-
 class OverviewChart extends StatelessWidget {
   const OverviewChart({super.key, required this.data, required this.description});
 

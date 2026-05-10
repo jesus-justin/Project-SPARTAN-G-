@@ -96,8 +96,8 @@ class MoodEnergyChart extends StatelessWidget {
             ),
           ),
           extraLinesData: ExtraLinesData(horizontalLines: [
-            HorizontalLine(y: avgMood, color: AppColors.primaryRed.withOpacity(0.6), strokeWidth: 1, dashArray: [6,4]),
-            HorizontalLine(y: avgEnergy, color: const Color(0xFF0288D1).withOpacity(0.6), strokeWidth: 1, dashArray: [6,4]),
+            HorizontalLine(y: avgMood, color: AppColors.primaryRed.withValues(alpha: 0.6), strokeWidth: 1, dashArray: [6,4]),
+            HorizontalLine(y: avgEnergy, color: const Color(0xFF0288D1).withValues(alpha: 0.6), strokeWidth: 1, dashArray: [6,4]),
           ]),
 
           lineBarsData: <LineChartBarData>[

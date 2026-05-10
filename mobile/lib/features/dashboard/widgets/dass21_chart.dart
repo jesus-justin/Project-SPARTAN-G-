@@ -40,20 +40,32 @@ class Dass21Chart extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
       SizedBox(
         height: 260,
-        child: LineChart(LineChartData(
-          minY: 0,
-          maxY: 42,
-          titlesData: FlTitlesData(bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, getTitlesWidget: (v, meta) {
-            final i = v.toInt();
-            if (i < 0 || i >= labels.length) return const SizedBox.shrink();
-            return Text(labels[i], style: const TextStyle(fontSize: 10));
-          }))),
-          lineBarsData: <LineChartBarData>[
-            LineChartBarData(isCurved: true, color: AppColors.primaryRed, spots: spotsDep, barWidth: 3),
-            LineChartBarData(isCurved: true, color: const Color(0xFFFF9800), spots: spotsAnx, barWidth: 3),
-            LineChartBarData(isCurved: true, color: const Color(0xFF0288D1), spots: spotsStr, barWidth: 3),
-          ],
-        )),
+        child: LineChart(
+          LineChartData(
+            minY: 0,
+            maxY: 42,
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 34)),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, meta) {
+                    final i = v.toInt();
+                    if (i < 0 || i >= labels.length) return const SizedBox.shrink();
+                    return Text(labels[i], style: const TextStyle(fontSize: 10));
+                  },
+                ),
+              ),
+            ),
+            lineBarsData: <LineChartBarData>[
+              LineChartBarData(isCurved: true, color: AppColors.primaryRed, spots: spotsDep, barWidth: 3, dotData: const FlDotData(show: true)),
+              LineChartBarData(isCurved: true, color: const Color(0xFFFF9800), spots: spotsAnx, barWidth: 3, dotData: const FlDotData(show: true)),
+              LineChartBarData(isCurved: true, color: const Color(0xFF0288D1), spots: spotsStr, barWidth: 3, dotData: const FlDotData(show: true)),
+            ],
+          ),
+        ),
       ),
       const SizedBox(height: 8),
       Wrap(spacing: 8, children: <Widget>[
@@ -76,7 +88,7 @@ class _SeverityBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
       child: Row(children: <Widget>[
         Text('$label: ', style: TextStyle(color: color, fontWeight: FontWeight.w700)),
         Text(severity, style: TextStyle(color: color))
