@@ -164,6 +164,8 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   @override
   Widget build(BuildContext context) {
     final AuthProvider auth = context.watch<AuthProvider>();
+    final Size screenSize = MediaQuery.sizeOf(context);
+    final double tabViewHeight = screenSize.height < 760 ? 430 : 360;
 
     return Scaffold(
       appBar: AppBar(
@@ -228,7 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
-                    height: 360,
+                    height: tabViewHeight,
                     child: TabBarView(
                       children: <Widget>[
                         // Overview tab
