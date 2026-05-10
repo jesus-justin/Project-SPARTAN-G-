@@ -12,7 +12,7 @@ import os
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, KFold
 from sklearn.metrics import (
     classification_report, confusion_matrix, roc_auc_score, 
     precision_score, recall_score, f1_score, roc_curve, auc
@@ -64,17 +64,36 @@ class MentalHealthPredictor:
         )
         self.lr_model.fit(X_train_scaled, y_train)
         
-        # Cross-validation
-        cv_scores = cross_val_score(
-            self.lr_model, X_train_scaled, y_train,
-            cv=StratifiedKFold(n_splits=5),
-            scoring='roc_auc'
-        )
+        # Cross-validation (use KFold for small datasets to avoid stratification issues)
+        try:
+            n_splits = min(5, len(X_train_scaled) // 2)
+            if n_splits < 2:
+                n_splits = 2
+            
+            # Try stratified first, fall back to regular KFold
+            try:
+                cv_scores = cross_val_score(
+                    self.lr_model, X_train_scaled, y_train,
+                    cv=StratifiedKFold(n_splits=n_splits),
+                    scoring='roc_auc'
+                )
+            except ValueError:
+                # Fall back to regular KFold if stratification fails
+                cv_scores = cross_val_score(
+                    self.lr_model, X_train_scaled, y_train,
+                    cv=KFold(n_splits=n_splits),
+                    scoring='roc_auc'
+                )
+        except Exception as e:
+            # Skip CV for very small datasets
+            print(f"  ⚠ Skipping cross-validation (dataset too small): {str(e)}")
+            cv_scores = []
         
         lr_pred = self.lr_model.predict(X_test_scaled)
         lr_pred_proba = self.lr_model.predict_proba(X_test_scaled)[:, 1]
         
-        print(f"  ✓ Cross-validation AUC: {cv_scores.mean():.4f} (+/- {cv_scores.std():.4f})")
+        if len(cv_scores) > 0:
+            print(f"  ✓ Cross-validation AUC: {cv_scores.mean():.4f} (+/- {cv_scores.std():.4f})")
         print(f"  ✓ Test ROC-AUC: {roc_auc_score(y_test, lr_pred_proba):.4f}")
         print(f"  ✓ Test F1-Score: {f1_score(y_test, lr_pred):.4f}")
         print(f"  ✓ Test Precision: {precision_score(y_test, lr_pred):.4f}")
@@ -100,14 +119,15 @@ class MentalHealthPredictor:
             'verbosity': 0
         }
         
-        # Train with early stopping
+        # Train with early stopping (adjust for small datasets)
+        early_stopping = min(50, max(5, len(X_train_scaled) // 2))
         evals = [(dtrain, 'train'), (dtest, 'test')]
         self.xgb_model = xgb.train(
             params,
             dtrain,
             num_boost_round=500,
             evals=evals,
-            early_stopping_rounds=50,
+            early_stopping_rounds=early_stopping,
             verbose_eval=False
         )
         

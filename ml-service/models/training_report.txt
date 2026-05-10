@@ -1,0 +1,46 @@
+======================================================================
+MENTAL HEALTH PREDICTIVE MODEL - TRAINING REPORT
+Generated: 2026-05-10T15:20:35.979805
+======================================================================
+
+MODELS TRAINED:
+1. Logistic Regression (Baseline)
+   - Reference: Hosmer, Lemeshow, & Sturdivant (2013)
+   - Purpose: Interpretable baseline for comparison
+
+2. XGBoost (Primary)
+   - Reference: Chen & Guestrin (2016), Shatte et al. (2019)
+   - Purpose: High-accuracy predictions on behavioral data
+
+3. SHAP Explainability
+   - Reference: Lundberg & Lee (2017)
+   - Purpose: Feature importance and prediction explanations
+
+TEST SET PERFORMANCE:
+  Logistic Regression AUC: 1.0000
+  XGBoost AUC: 0.5000
+  Test Set Size: 2
+  Positive Cases: 1
+  Negative Cases: 1
+
+TARGET VARIABLE:
+  0 = Low/Moderate Risk (no intervention needed)
+  1 = High/Crisis Risk (requires intervention)
+
+FEATURES USED:
+  1. dass21_score
+  2. phq9_score
+  3. gad7_score
+  4. esm_entries_7d
+  5. year_level
+  6. sex_encoded
+  7. dass_trend
+  8. phq_trend
+  9. gad_trend
+  10. at_risk_percentage
+  11. high_risk_frequency
+  12. days_since_last
+  13. assessment_count
+  14. total_appointments
+  15. completed_appointments
+  16. trajectory_numeric

@@ -41,8 +41,6 @@ class DataPipeline:
             rc.dass21_score,
             rc.phq9_score,
             rc.gad7_score,
-            rc.mood_slope,
-            rc.energy_slope,
             rc.trajectory,
             rc.risk_level,
             rc.created_at,
@@ -148,13 +146,17 @@ class DataPipeline:
             'dass21_score': 0,
             'phq9_score': 0,
             'gad7_score': 0,
-            'mood_slope': 0,
-            'energy_slope': 0,
             'esm_entries_7d': 0,
             'dass_trend': 0,
             'phq_trend': 0,
             'gad_trend': 0,
             'year_level': 2,
+            'total_appointments': 0,
+            'completed_appointments': 0,
+            'at_risk_percentage': 0,
+            'high_risk_frequency': 0,
+            'days_since_last': 0,
+            'assessment_count': 1
         })
         
         # Encode categorical variables
@@ -173,7 +175,6 @@ class DataPipeline:
         # Select features for modeling
         feature_columns = [
             'dass21_score', 'phq9_score', 'gad7_score',
-            'mood_slope', 'energy_slope',
             'esm_entries_7d', 'year_level', 'sex_encoded',
             'dass_trend', 'phq_trend', 'gad_trend',
             'at_risk_percentage', 'high_risk_frequency',
@@ -184,6 +185,9 @@ class DataPipeline:
         
         X = df_final[feature_columns].copy()
         y = df_final['target'].copy()
+        
+        # Ensure all features are numeric
+        X = X.astype(float)
         
         print(f"\n📈 Dataset Statistics:")
         print(f"  Total records: {len(X)}")
