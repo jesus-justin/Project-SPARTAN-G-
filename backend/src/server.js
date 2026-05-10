@@ -6,7 +6,7 @@ async function start() {
   try {
     await healthcheckDb();
 
-    const server = app.listen(env.port, () => {
+    const server = app.listen(env.port, '0.0.0.0', () => {
       console.log(`SPARTAN-G backend listening on port ${env.port}`);
     });
 
@@ -22,6 +22,7 @@ async function start() {
     process.on('SIGTERM', shutdown);
   } catch (error) {
     console.error('Failed to start backend:', error.message);
+    console.error('Full error:', error);
     process.exit(1);
   }
 }
