@@ -7,6 +7,7 @@ import {
   trainModels,
   getPredictionHistory,
   explainPrediction,
+  getAnalyticsReport,
 } from '../controllers/prediction.controller.js';
 
 const router = express.Router();
@@ -18,6 +19,9 @@ const router = express.Router();
 
 // Health check for ML service
 router.get('/health', getMlServiceStatus);
+
+// Get analytics report for all students
+router.get('/report/analytics', requireAuth, getAnalyticsReport);
 
 // Get predicted risk for single student
 router.get('/student/:userId', requireAuth, getPredictedRisk);

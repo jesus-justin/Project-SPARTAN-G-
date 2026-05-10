@@ -337,6 +337,140 @@ export async function explainPrediction(req, res, next) {
 }
 
 /**
+ * Get comprehensive analytics report for all students
+ * Used by the predictive analytics dashboard
+ */
+export async function getAnalyticsReport(req, res, next) {
+  try {
+    // Get all students with latest predictions
+    const result = await query(
+      `SELECT DISTINCT ON (rc.user_id)
+        u.id as user_id,
+        CONCAT(u.first_name, ' ', u.last_name) as name,
+        u.student_id,
+        rc.dass21_score,
+        rc.phq9_score,
+        rc.gad7_score,
+        rc.trajectory,
+        rc.risk_level,
+        rc.shap_drivers,
+        rc.created_at
+       FROM risk_classifications rc
+       JOIN users u ON rc.user_id = u.id
+       ORDER BY rc.user_id, rc.created_at DESC`
+    );
+
+    if (result.rowCount === 0) {
+      return res.json({
+        success: true,
+        students: [],
+        summary: {
+          total_students: 0,
+          low_risk: 0,
+          moderate_risk: 0,
+          high_risk: 0,
+          crisis_risk: 0,
+          at_risk_percentage: 0,
+          avg_prediction_probability: 0
+        },
+        top_drivers: []
+      });
+    }
+
+    // Call ML service to get predictions for all students
+    let mlPredictions = {};
+    try {
+      const mlResponse = await axios.post(`${ML_SERVICE_URL}/api/predict/batch`, {
+        userIds: result.rows.map(r => r.user_id)
+      }, { timeout: 30000 });
+      
+      if (mlResponse.data.predictions) {
+        mlPredictions = mlResponse.data.predictions.reduce((acc, pred) => {
+          acc[pred.user_id] = pred;
+          return acc;
+        }, {});
+      }
+    } catch (mlError) {
+      console.warn('ML service batch prediction failed, using database predictions');
+    }
+
+    // Process and enrich student data
+    const students = result.rows.map(row => {
+      const mlPred = mlPredictions[row.user_id];
+      const shapDrivers = row.shap_drivers ? JSON.parse(row.shap_drivers) : [];
+      
+      return {
+        user_id: row.user_id,
+        name: row.name,
+        student_id: row.student_id,
+        dass21_score: row.dass21_score,
+        phq9_score: row.phq9_score,
+        gad7_score: row.gad7_score,
+        trajectory: row.trajectory,
+        predicted_risk_level: mlPred?.predicted_risk_level || row.risk_level,
+        prediction_probability: mlPred?.prediction_probability || 0.5,
+        shap_drivers: mlPred?.shap_drivers || shapDrivers,
+        recommendation: mlPred?.recommendation || 'Monitor regularly',
+        created_at: row.created_at
+      };
+    });
+
+    // Calculate statistics
+    const summary = {
+      total_students: students.length,
+      low_risk: students.filter(s => s.predicted_risk_level === 'Low').length,
+      moderate_risk: students.filter(s => s.predicted_risk_level === 'Moderate').length,
+      high_risk: students.filter(s => s.predicted_risk_level === 'High').length,
+      crisis_risk: students.filter(s => s.predicted_risk_level === 'Crisis').length,
+      at_risk_percentage: (
+        ((students.filter(s => ['High', 'Crisis'].includes(s.predicted_risk_level)).length) / 
+         students.length * 100)
+      ).toFixed(1),
+      avg_prediction_probability: (
+        students.reduce((sum, s) => sum + (s.prediction_probability || 0), 0) / 
+        students.length
+      ).toFixed(3)
+    };
+
+    // Aggregate SHAP drivers
+    const driverMap = {};
+    students.forEach(student => {
+      if (student.shap_drivers && Array.isArray(student.shap_drivers)) {
+        student.shap_drivers.forEach(driver => {
+          if (!driverMap[driver.feature]) {
+            driverMap[driver.feature] = {
+              feature: driver.feature,
+              avg_shap_value: 0,
+              frequency: 0
+            };
+          }
+          driverMap[driver.feature].avg_shap_value += (driver.shap_value || 0);
+          driverMap[driver.feature].frequency += 1;
+        });
+      }
+    });
+
+    // Calculate averages and sort
+    const topDrivers = Object.values(driverMap)
+      .map(driver => ({
+        ...driver,
+        avg_shap_value: driver.avg_shap_value / driver.frequency
+      }))
+      .sort((a, b) => Math.abs(b.avg_shap_value) - Math.abs(a.avg_shap_value))
+      .slice(0, 10);
+
+    return res.json({
+      success: true,
+      students,
+      summary,
+      top_drivers: topDrivers
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+/**
  * Generate human-readable interpretation of SHAP drivers
  */
 function generateInterpretation(shapDrivers, prediction) {
