@@ -28,7 +28,13 @@ class OverviewChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasData = data.isNotEmpty && (data['hasData'] == true || data['latest'] != null);
+    final bool hasAnyScores =
+        data['dass21']?['depression'] != null ||
+        data['dass21']?['anxiety'] != null ||
+        data['dass21']?['stress'] != null ||
+        data['phq9']?['totalScore'] != null ||
+        data['gad7']?['totalScore'] != null;
+    final bool hasData = data.isNotEmpty && (data['hasData'] == true || data['latest'] != null || hasAnyScores);
 
     if (!hasData) {
       return Column(
