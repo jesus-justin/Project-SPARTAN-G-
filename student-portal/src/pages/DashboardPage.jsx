@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import client from '../api/client';
 import MoodEnergyChart from '../components/MoodEnergyChart';
 import RiskBadge from '../components/RiskBadge';
@@ -25,6 +25,7 @@ export default function DashboardPage() {
   const [trajectory, setTrajectory] = useState('Unknown');
   const [displayName, setDisplayName] = useState('Student');
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function DashboardPage() {
     }
 
     load();
-  }, [user]);
+  }, [user, location]);
 
   const latest = useMemo(() => (esmEntries.length ? esmEntries[0] : null), [esmEntries]);
 

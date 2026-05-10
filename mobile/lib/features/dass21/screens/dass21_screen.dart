@@ -258,7 +258,7 @@ class _Dass21ScreenState extends State<Dass21Screen> {
                 ),
                 onPressed: () {
                   Navigator.pop(ctx);
-                  context.go('/phq9');
+                  context.go('/dashboard');
                 },
                 child: const Text(
                   'Go to Dashboard',
