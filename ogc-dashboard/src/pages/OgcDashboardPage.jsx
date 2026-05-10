@@ -23,41 +23,88 @@ export default function OgcDashboardPage() {
   const [activeTab, setActiveTab] = useState('notifications');
   const [notifications, setNotifications] = useState([]);
   const [populationData, setPopulationData] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [syncError, setSyncError] = useState('');
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
-  const loadNotifications = async () => {
-    try {
-      const result = await getNotifications();
-      setNotifications(result.data || []);
-    } catch {
-      setNotifications(FALLBACK_NOTIFICATIONS);
+  const normalizeNotification = (item) => ({
+    ...item,
+    caseId: item.caseId ?? item.studentId ?? `#${item.id}`,
+    studentId: item.studentId ?? item.caseId ?? null,
+    studentName: item.studentName ?? item.student_name ?? '',
+    riskLevel: item.riskLevel ?? item.risk_level ?? 'Low',
+    shapDrivers: Array.isArray(item.shapDrivers) ? item.shapDrivers : [],
+    acknowledged: Boolean(item.acknowledged ?? item.seen),
+    seen: Boolean(item.seen ?? item.acknowledged),
+    trajectory: item.trajectory ?? 'Unknown',
+  });
+
+  const loadDashboard = async ({ silent = false } = {}) => {
+    if (!silent) {
+      setIsRefreshing(true);
     }
-  };
 
-  const loadPopulationData = async () => {
     try {
-      const result = await getPopulationDashboard();
-      setPopulationData(result.data || null);
-    } catch {
-      // ignore
+      const [notificationsResult, populationResult] = await Promise.allSettled([
+        getNotifications(),
+        getPopulationDashboard(),
+      ]);
+
+      if (notificationsResult.status === 'fulfilled') {
+        const nextNotifications = Array.isArray(notificationsResult.value.data)
+          ? notificationsResult.value.data.map(normalizeNotification)
+          : [];
+        setNotifications(nextNotifications);
+      } else if (notifications.length === 0) {
+        setNotifications(FALLBACK_NOTIFICATIONS.map(normalizeNotification));
+      }
+
+      if (populationResult.status === 'fulfilled') {
+        setPopulationData(populationResult.value.data || null);
+        setSyncError('');
+      } else {
+        setSyncError('Live reports are temporarily unavailable. Showing the last successful snapshot.');
+      }
+
+      setLastSyncedAt(new Date());
+    } finally {
+      if (!silent) {
+        setIsRefreshing(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadNotifications();
-    loadPopulationData();
-    const id = setInterval(() => {
-      loadNotifications();
-      loadPopulationData();
-    }, 30000);
-    return () => clearInterval(id);
+    loadDashboard();
+
+    const handleRefresh = () => {
+      if (document.visibilityState === 'visible') {
+        loadDashboard({ silent: true });
+      }
+    };
+
+    const id = window.setInterval(() => {
+      loadDashboard({ silent: true });
+    }, 15000);
+
+    window.addEventListener('focus', handleRefresh);
+    document.addEventListener('visibilitychange', handleRefresh);
+
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener('focus', handleRefresh);
+      document.removeEventListener('visibilitychange', handleRefresh);
+    };
   }, []);
 
   const [populationTab, setPopulationTab] = useState('descriptive');
 
   const unreadCount = useMemo(
-    () => notifications.filter((item) => !item.acknowledged).length,
+    () => notifications.filter((item) => !(item.acknowledged ?? item.seen)).length,
     [notifications]
   );
+
+  const topShapDrivers = populationData?.topShapDrivers || [];
 
   const onAcknowledge = async (notificationId) => {
     try {
@@ -68,7 +115,7 @@ export default function OgcDashboardPage() {
 
     setNotifications((prev) =>
       prev.map((item) =>
-        item.id === notificationId ? { ...item, acknowledged: true } : item
+        item.id === notificationId ? { ...item, acknowledged: true, seen: true } : item
       )
     );
   };
@@ -77,11 +124,23 @@ export default function OgcDashboardPage() {
     <div style={{ maxWidth: 1200, margin: '24px auto', padding: 16 }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <h2 style={{ margin: 0, color: '#CC0000' }}>OGC Dashboard</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <span style={{ color: '#666', fontSize: 13 }}>
+            {lastSyncedAt ? `Last sync: ${lastSyncedAt.toLocaleTimeString()}` : 'Live sync enabled'}
+          </span>
+          <button onClick={() => loadDashboard()} disabled={isRefreshing}>
+            {isRefreshing ? 'Refreshing...' : 'Refresh now'}
+          </button>
           <UnreadBadge count={unreadCount} />
           <button onClick={logout}>Logout</button>
         </div>
       </header>
+
+      {syncError && (
+        <div style={{ marginBottom: 12, padding: 12, borderRadius: 10, background: '#fff4e5', border: '1px solid #ffd59a', color: '#8a5a00' }}>
+          {syncError}
+        </div>
+      )}
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #ddd', marginBottom: 20 }}>
@@ -157,28 +216,18 @@ export default function OgcDashboardPage() {
 
           {populationTab === 'predictive' && (
             <div style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #ddd' }}>
-              <h3 style={{ marginTop: 0 }}>Top SHAP Drivers (recent notifications)</h3>
-              {notifications.length === 0 ? (
-                <p style={{ color: '#777' }}>No recent notifications</p>
+              <h3 style={{ marginTop: 0 }}>Top SHAP Drivers</h3>
+              {topShapDrivers.length === 0 ? (
+                <p style={{ color: '#777' }}>No SHAP driver data available yet.</p>
               ) : (
                 <div style={{ display: 'grid', gap: 8 }}>
-                  {Object.entries(
-                    notifications.reduce((acc, n) => {
-                      const drivers = n.shapDrivers || [];
-                      drivers.forEach((d) => {
-                        const key = d.feature;
-                        acc[key] = acc[key] || { feature: d.feature, value: 0, impact: d.impact || 'LOW' };
-                        acc[key].value += d.value || 0;
-                      });
-                      return acc;
-                    }, {})
-                  ).map(([k, v]) => (
-                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  {topShapDrivers.map((driver) => (
+                    <div key={driver.feature} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <div style={{ fontWeight: 700 }}>{v.feature}</div>
-                        <div style={{ color: '#666', fontSize: 13 }}>{v.impact || ''}</div>
+                        <div style={{ fontWeight: 700 }}>{driver.feature}</div>
+                        <div style={{ color: '#666', fontSize: 13 }}>{driver.avgImpact || 'LOW'} impact</div>
                       </div>
-                      <div style={{ fontWeight: 700 }}>{Math.round(v.value)}</div>
+                      <div style={{ fontWeight: 700 }}>{driver.count}</div>
                     </div>
                   ))}
                 </div>

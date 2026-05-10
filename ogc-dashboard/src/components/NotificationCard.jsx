@@ -10,6 +10,9 @@ const RISK_COLORS = {
 export default function NotificationCard({ notification, onAcknowledge }) {
   const color = RISK_COLORS[notification.riskLevel] || RISK_COLORS.Low;
   const isCrisis = notification.riskLevel === 'Crisis';
+  const displayId = notification.caseId || notification.studentId || `#${notification.id}`;
+  const isSeen = Boolean(notification.seen ?? notification.acknowledged);
+  const studentLabel = notification.studentName || (notification.studentId ? `Student ${notification.studentId}` : 'Student record');
 
   return (
     <article
@@ -23,7 +26,7 @@ export default function NotificationCard({ notification, onAcknowledge }) {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <strong>Case #{notification.caseId}</strong>
+        <strong>Case {displayId}</strong>
         <span style={{ color }}>{notification.riskLevel}</span>
       </div>
 
@@ -35,15 +38,18 @@ export default function NotificationCard({ notification, onAcknowledge }) {
 
       {isCrisis && (
         <p style={{ marginBottom: 10 }}>
-          {notification.studentName} ({notification.studentId})
+          {studentLabel} {notification.studentId ? `(${notification.studentId})` : ''}
         </p>
       )}
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <Link to={`/students/${notification.caseId}`} state={{ notification }}>
+        <Link to={`/students/${displayId}`} state={{ notification }}>
           View details
         </Link>
-        {!notification.acknowledged && (
+        {isSeen && (
+          <span style={{ color: '#2e7d32', fontWeight: 600 }}>Seen</span>
+        )}
+        {!isSeen && (
           <button onClick={() => onAcknowledge(notification.id)}>Acknowledge</button>
         )}
       </div>
