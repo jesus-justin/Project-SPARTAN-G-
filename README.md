@@ -9,6 +9,40 @@ Mental Health Support System for BatStateU-TNEU.
 - OGC dashboard: `ogc-dashboard` (Vite + React)
 - Mobile: `mobile` (Flutter)
 
+## Starting SPARTAN-G
+
+### Prerequisites (do these FIRST):
+1. Open XAMPP Control Panel
+2. Click Start next to MySQL
+3. Wait for MySQL to show green
+
+### Then start all services:
+Double-click `start-all.bat`
+
+### Or manually in order:
+```bash
+# Terminal 1 - Backend
+cd backend
+node src/server.js
+
+# Terminal 2 - Student Portal
+cd student-portal
+npm run dev
+
+# Terminal 3 - OGC Dashboard
+cd ogc-dashboard
+npm run dev
+
+# Terminal 4 - Mobile (Flutter Web)
+cd mobile
+flutter run -d chrome
+```
+
+### Verify everything is running:
+- http://localhost:3001/api/health → `{"success":true}`
+- http://localhost:5173 → Student Portal
+- http://localhost:5174 → OGC Dashboard
+
 ## Running locally
 
 1. Backend
@@ -19,7 +53,7 @@ npm install
 # create DB and seed
 npm run setup
 # start dev server
-npm run dev
+node src/server.js
 ```
 
 2. Student portal

@@ -2,30 +2,34 @@
 REM SPARTAN-G Startup Script
 REM Opens all 4 services in separate Command Prompt windows
 
-echo Starting all SPARTAN-G services...
+echo Starting SPARTAN-G System...
 echo.
-
-REM Start Backend
-start "SPARTAN-G Backend" cmd /k "cd /d C:\xampp\htdocs\Project-SPARTAN-G-\backend && npm run dev"
-timeout /t 2 /nobreak
-
-REM Start Student Portal
+echo Step 1: Please make sure XAMPP MySQL is running!
+echo Opening XAMPP Control Panel...
+start "" "C:\xampp\xampp-control.exe"
+echo.
+echo Waiting 5 seconds for MySQL to start...
+timeout /t 5 /nobreak
+echo.
+echo Starting Backend...
+start "SPARTAN-G Backend" cmd /k "cd /d C:\xampp\htdocs\Project-SPARTAN-G-\backend && node src/server.js"
+timeout /t 3 /nobreak
+echo.
+echo Starting Student Portal...
 start "SPARTAN-G Student Portal" cmd /k "cd /d C:\xampp\htdocs\Project-SPARTAN-G-\student-portal && npm run dev"
 timeout /t 2 /nobreak
-
-REM Start OGC Dashboard
+echo.
+echo Starting OGC Dashboard...
 start "SPARTAN-G OGC Dashboard" cmd /k "cd /d C:\xampp\htdocs\Project-SPARTAN-G-\ogc-dashboard && npm run dev"
 timeout /t 2 /nobreak
-
-REM Start Flutter Mobile
+echo.
+echo Starting Flutter Mobile...
 start "SPARTAN-G Flutter" cmd /k "cd /d C:\xampp\htdocs\Project-SPARTAN-G-\mobile && flutter run -d chrome"
-
 echo.
-echo All services started in separate windows.
-echo Backend: http://localhost:3001
-echo Student Portal: http://localhost:5173
-echo OGC Dashboard: http://localhost:5174
-echo Flutter Web: Chrome device
+echo All services started!
 echo.
-echo Run stop-all.bat to terminate all services.
+echo Student Portal:  http://localhost:5173
+echo OGC Dashboard:   http://localhost:5174
+echo Backend API:     http://localhost:3001/api/health
+echo.
 pause

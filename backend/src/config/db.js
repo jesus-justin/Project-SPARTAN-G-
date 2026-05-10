@@ -57,6 +57,17 @@ export async function query(text, params = []) {
 }
 
 export async function healthcheckDb() {
-  const [rows] = await pool.execute('SELECT NOW() as now');
-  return rows[0];
+  let retries = 3;
+  while (retries > 0) {
+    try {
+      const [rows] = await pool.execute('SELECT 1');
+      console.log('Database connected successfully');
+      return rows[0];
+    } catch (err) {
+      retries--;
+      if (retries === 0) throw err;
+      console.log(`Database connection failed. Retrying... (${retries} left)`);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
 }
