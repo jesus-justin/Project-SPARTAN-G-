@@ -15,7 +15,7 @@ const PredictiveAnalyticsReport = () => {
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('ogc_token');
       
       // Fetch analytics report from backend
       const response = await fetch('http://localhost:3001/api/predictions/report/analytics', {

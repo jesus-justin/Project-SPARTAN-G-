@@ -5,6 +5,7 @@ import OgcDashboardPage from './pages/OgcDashboardPage';
 import StudentDetailPage from './pages/StudentDetailPage';
 import GinhawaManagePage from './pages/GinhawaManagePage';
 import AppointmentsPage from './pages/AppointmentsPage';
+import PredictiveAnalyticsPage from './pages/PredictiveAnalyticsPage';
 import { useFacilitatorAuth } from './context/FacilitatorAuthContext';
 
 export default function App() {
@@ -43,6 +44,14 @@ export default function App() {
           element={
             <FacilitatorProtectedRoute>
               <AppointmentsPage />
+            </FacilitatorProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <FacilitatorProtectedRoute>
+              <PredictiveAnalyticsPage />
             </FacilitatorProtectedRoute>
           }
         />

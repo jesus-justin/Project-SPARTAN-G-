@@ -342,9 +342,9 @@ export async function explainPrediction(req, res, next) {
  */
 export async function getAnalyticsReport(req, res, next) {
   try {
-    // Get all students with latest predictions
+    // Get all students with latest predictions using subquery
     const result = await query(
-      `SELECT DISTINCT ON (rc.user_id)
+      `SELECT 
         u.id as user_id,
         CONCAT(u.first_name, ' ', u.last_name) as name,
         u.student_id,
@@ -357,7 +357,10 @@ export async function getAnalyticsReport(req, res, next) {
         rc.created_at
        FROM risk_classifications rc
        JOIN users u ON rc.user_id = u.id
-       ORDER BY rc.user_id, rc.created_at DESC`
+       WHERE rc.id IN (
+         SELECT MAX(id) FROM risk_classifications GROUP BY user_id
+       )
+       ORDER BY rc.created_at DESC`
     );
 
     if (result.rowCount === 0) {

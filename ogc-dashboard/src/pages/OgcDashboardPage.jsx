@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { acknowledgeNotification, getNotifications, getPopulationDashboard } from '../api/ogc.api';
 import NotificationCard from '../components/NotificationCard';
 import UnreadBadge from '../components/UnreadBadge';
@@ -20,6 +21,7 @@ const FALLBACK_NOTIFICATIONS = [
 
 export default function OgcDashboardPage() {
   const { logout, token } = useFacilitatorAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('notifications');
   const [notifications, setNotifications] = useState([]);
   const [populationData, setPopulationData] = useState(null);
@@ -162,6 +164,9 @@ export default function OgcDashboardPage() {
           </span>
           <button onClick={() => loadDashboard()} disabled={isRefreshing}>
             {isRefreshing ? 'Refreshing...' : 'Refresh now'}
+          </button>
+          <button onClick={() => navigate('/analytics')} style={{ padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 500 }}>
+            📊 Analytics
           </button>
           <UnreadBadge count={unreadCount} />
           <button onClick={logout}>Logout</button>
