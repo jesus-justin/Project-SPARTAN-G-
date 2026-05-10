@@ -70,13 +70,16 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
         final List<dynamic> esm = (data['esmData'] != null && data['esmData']['last7Days'] is List) ? List<dynamic>.from(data['esmData']['last7Days']) : [];
         final latestScores = data['latestScores'];
         final List<dynamic> riskHistory = data['riskHistory'] is List ? List<dynamic>.from(data['riskHistory']) : [];
-        final List<dynamic> dassHistory = data['dass21History'] is List ? List<dynamic>.from(data['dass21History']) : [];
-        final List<dynamic> phqHistory = data['phq9History'] is List ? List<dynamic>.from(data['phq9History']) : [];
-        final List<dynamic> gadHistory = data['gad7History'] is List ? List<dynamic>.from(data['gad7History']) : [];
+        final Map<String, dynamic> dassHistoryData = data['dass21History'] is Map<String, dynamic> ? Map<String, dynamic>.from(data['dass21History']) : <String, dynamic>{};
+        final Map<String, dynamic> phqHistoryData = data['phq9History'] is Map<String, dynamic> ? Map<String, dynamic>.from(data['phq9History']) : <String, dynamic>{};
+        final Map<String, dynamic> gadHistoryData = data['gad7History'] is Map<String, dynamic> ? Map<String, dynamic>.from(data['gad7History']) : <String, dynamic>{};
+        final List<dynamic> dassHistory = dassHistoryData['entries'] is List ? List<dynamic>.from(dassHistoryData['entries']) : [];
+        final List<dynamic> phqHistory = phqHistoryData['entries'] is List ? List<dynamic>.from(phqHistoryData['entries']) : [];
+        final List<dynamic> gadHistory = gadHistoryData['entries'] is List ? List<dynamic>.from(gadHistoryData['entries']) : [];
         final String overviewDesc = (data['generalSummary'] != null && data['generalSummary']['description'] != null) ? data['generalSummary']['description'].toString() : '';
-        final String dassDesc = data['dassDescription']?.toString() ?? '';
-        final String phqDesc = data['phqDescription']?.toString() ?? '';
-        final String gadDesc = data['gadDescription']?.toString() ?? '';
+        final String dassDesc = dassHistoryData['description']?.toString() ?? '';
+        final String phqDesc = phqHistoryData['description']?.toString() ?? '';
+        final String gadDesc = gadHistoryData['description']?.toString() ?? '';
 
         setState(() {
           _riskLevel = risk;
