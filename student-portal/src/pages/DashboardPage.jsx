@@ -43,11 +43,12 @@ export default function DashboardPage() {
           setRiskLevel(data.currentRisk || 'Unknown');
           setEsmEntries((data.esmData && data.esmData.last7Days) ? data.esmData.last7Days : []);
           setLatestScores(data.latestScores || null);
-          setDassHistory(Array.isArray(data.dass21History) ? data.dass21History : []);
-          setPhqHistory(Array.isArray(data.phq9History) ? data.phq9History : []);
-          setGadHistory(Array.isArray(data.gad7History) ? data.gad7History : []);
+          // Extract entries array from history objects
+          setDassHistory(Array.isArray(data.dass21History?.entries) ? data.dass21History.entries : (Array.isArray(data.dass21History) ? data.dass21History : []));
+          setPhqHistory(Array.isArray(data.phq9History?.entries) ? data.phq9History.entries : (Array.isArray(data.phq9History) ? data.phq9History : []));
+          setGadHistory(Array.isArray(data.gad7History?.entries) ? data.gad7History.entries : (Array.isArray(data.gad7History) ? data.gad7History : []));
           setOverviewDesc((data.generalSummary && data.generalSummary.description) ? data.generalSummary.description : '');
-          setDassDesc(data.dassDescription || '');
+          setDassDesc(data.dass21History?.description || data.dassDescription || '');
           setPhqDesc(data.phqDescription || '');
           setGadDesc(data.gadDescription || '');
         } else {

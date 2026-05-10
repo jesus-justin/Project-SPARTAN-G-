@@ -1,9 +1,7 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-
-import '../constants/api_constants.dart';
+import 'package:spartan_g/core/constants/api_constants.dart';
 import 'storage_service.dart';
 
 typedef UnauthorizedCallback = void Function();
@@ -32,14 +30,14 @@ class ApiService {
   }
 
   Future<dynamic> get(String endpoint) async {
-    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final String base = ApiConstants.baseUrl;
     final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.get(uri, headers: await _headers());
     return _handleResponse(response);
   }
 
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
-    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final String base = ApiConstants.baseUrl;
     final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.post(
       uri,
@@ -50,7 +48,7 @@ class ApiService {
   }
 
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
-    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final String base = ApiConstants.baseUrl;
     final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.put(
       uri,
@@ -61,7 +59,7 @@ class ApiService {
   }
 
   Future<dynamic> delete(String endpoint) async {
-    final String base = kIsWeb ? kBaseUrlWeb : kBaseUrl;
+    final String base = ApiConstants.baseUrl;
     final Uri uri = Uri.parse('$base$endpoint');
     final http.Response response = await _client.delete(uri, headers: await _headers());
     return _handleResponse(response);
