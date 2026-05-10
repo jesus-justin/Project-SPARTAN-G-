@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 
 import 'core/constants/app_colors.dart';
 import 'core/constants/app_strings.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/services/api_service.dart';
-import 'core/services/web_storage_helper.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
 import 'features/consent/screens/consent_screen.dart';
@@ -20,7 +18,9 @@ import 'features/ginhawa/screens/content_detail_screen.dart';
 import 'features/ginhawa/screens/safety_plan_screen.dart';
 
 class SpartanGApp extends StatefulWidget {
-  const SpartanGApp({super.key});
+  const SpartanGApp({super.key, this.authProvider});
+
+  final AuthProvider? authProvider;
 
   @override
   State<SpartanGApp> createState() => _SpartanGAppState();
@@ -29,12 +29,14 @@ class SpartanGApp extends StatefulWidget {
 class _SpartanGAppState extends State<SpartanGApp> {
   late final AuthProvider _authProvider;
   late final GoRouter _router;
+  late final bool _ownsAuthProvider;
 
   @override
   void initState() {
     super.initState();
 
-    _authProvider = AuthProvider(
+    _ownsAuthProvider = widget.authProvider == null;
+    _authProvider = widget.authProvider ?? AuthProvider(
       apiService: ApiService(
         onUnauthorized: () {
           _authProvider.logout();
@@ -49,14 +51,13 @@ class _SpartanGAppState extends State<SpartanGApp> {
       initialLocation: '/',
       refreshListenable: _authProvider,
       redirect: (BuildContext context, GoRouterState state) {
-        final bool authenticated = _authProvider.isAuthenticated || hasWebString(AppStrings.tokenKey);
-        final String location = state.uri.path;
-        final bool authRoute = location == '/login' || location == '/signup';
-        final bool bypass = state.uri.queryParameters['bypass'] == '1';
-
-        if (bypass && location == '/dashboard') {
+        if (_authProvider.isLoading) {
           return null;
         }
+
+        final bool authenticated = _authProvider.isAuthenticated;
+        final String location = state.uri.path;
+        final bool authRoute = location == '/login' || location == '/signup';
 
         if (!authenticated && !authRoute) {
           return '/login';
@@ -127,7 +128,9 @@ class _SpartanGAppState extends State<SpartanGApp> {
       ],
     );
 
-    _authProvider.initialize();
+    if (_ownsAuthProvider) {
+      _authProvider.initialize();
+    }
   }
 
   @override
@@ -139,21 +142,18 @@ class _SpartanGAppState extends State<SpartanGApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<AuthProvider>.value(
-      value: _authProvider,
-      child: MaterialApp.router(
-        title: AppStrings.appName,
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: AppColors.primaryRed,
-            primary: AppColors.primaryRed,
-          ),
-          scaffoldBackgroundColor: AppColors.background,
-          useMaterial3: true,
+    return MaterialApp.router(
+      title: AppStrings.appName,
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: AppColors.primaryRed,
+          primary: AppColors.primaryRed,
         ),
-        routerConfig: _router,
+        scaffoldBackgroundColor: AppColors.background,
+        useMaterial3: true,
       ),
+      routerConfig: _router,
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,21 +11,37 @@ class StorageService {
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   static Future<void> saveToken(String token) async {
+    if (kIsWeb) {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString(AppStrings.tokenKey, token);
+      await saveWebString(AppStrings.tokenKey, token);
+      return;
+    }
+
     await _secureStorage.write(key: AppStrings.tokenKey, value: token);
-    await saveWebString(AppStrings.tokenKey, token);
   }
 
   static Future<String?> getToken() async {
-    final String? secureValue = await _secureStorage.read(key: AppStrings.tokenKey);
-    if (secureValue != null && secureValue.isNotEmpty) {
-      return secureValue;
+    if (kIsWeb) {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final String? value = prefs.getString(AppStrings.tokenKey);
+      final String? fallback = await readWebString(AppStrings.tokenKey);
+      return value?.isNotEmpty == true ? value : fallback;
     }
-    return readWebString(AppStrings.tokenKey);
+
+    final String? secureValue = await _secureStorage.read(key: AppStrings.tokenKey);
+    return secureValue != null && secureValue.isNotEmpty ? secureValue : null;
   }
 
   static Future<void> clearToken() async {
+    if (kIsWeb) {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppStrings.tokenKey);
+      await removeWebString(AppStrings.tokenKey);
+      return;
+    }
+
     await _secureStorage.delete(key: AppStrings.tokenKey);
-    await removeWebString(AppStrings.tokenKey);
   }
 
   static Future<void> clearAllSecure() async {
@@ -34,16 +51,19 @@ class StorageService {
   static Future<void> setString(String key, String value) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
-    await saveWebString(key, value);
+    if (kIsWeb) {
+      await saveWebString(key, value);
+    }
   }
 
   static Future<String?> getString(String key) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String? stored = prefs.getString(key);
-    if (stored != null && stored.isNotEmpty) {
-      return stored;
+    final String? value = prefs.getString(key);
+    final String? fallback = kIsWeb ? await readWebString(key) : null;
+    if (value != null && value.isNotEmpty) {
+      return value;
     }
-    return readWebString(key);
+    return fallback;
   }
 
   static Future<void> setBool(String key, bool value) async {
@@ -59,6 +79,8 @@ class StorageService {
   static Future<void> remove(String key) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove(key);
-    await removeWebString(key);
+    if (kIsWeb) {
+      await removeWebString(key);
+    }
   }
 }

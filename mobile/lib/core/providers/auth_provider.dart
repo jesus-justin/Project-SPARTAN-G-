@@ -4,7 +4,6 @@ import 'package:flutter/foundation.dart';
 
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
-import '../services/web_storage_helper.dart';
 
 class AuthProvider extends ChangeNotifier {
   AuthProvider({ApiService? apiService}) : _apiService = apiService ?? ApiService();
@@ -12,7 +11,7 @@ class AuthProvider extends ChangeNotifier {
   final ApiService _apiService;
 
   bool _isAuthenticated = false;
-  bool _isLoading = false;
+  bool _isLoading = true;
   String? _token;
   String? _errorMessage;
   String _studentName = 'Student';
@@ -26,10 +25,9 @@ class AuthProvider extends ChangeNotifier {
   Future<void> initialize() async {
     _setLoading(true);
     try {
-      _token = readWebStringSync('spartan_jwt_token');
-      _token ??= await StorageService.getToken();
+      _token = await StorageService.getToken();
       _isAuthenticated = _token != null && _token!.isNotEmpty;
-      final String? savedName = readWebStringSync('student_name') ?? await StorageService.getString('student_name');
+      final String? savedName = await StorageService.getString('student_name');
       if (savedName != null && savedName.isNotEmpty) {
         _studentName = _normalizeDisplayName(savedName);
       }
