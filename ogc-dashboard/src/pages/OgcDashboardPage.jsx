@@ -19,7 +19,7 @@ const FALLBACK_NOTIFICATIONS = [
 ];
 
 export default function OgcDashboardPage() {
-  const { logout } = useFacilitatorAuth();
+  const { logout, token } = useFacilitatorAuth();
   const [activeTab, setActiveTab] = useState('notifications');
   const [notifications, setNotifications] = useState([]);
   const [populationData, setPopulationData] = useState(null);
@@ -55,8 +55,10 @@ export default function OgcDashboardPage() {
           ? notificationsResult.value.data.map(normalizeNotification)
           : [];
         setNotifications(nextNotifications);
-      } else if (notifications.length === 0) {
-        setNotifications(FALLBACK_NOTIFICATIONS.map(normalizeNotification));
+      } else {
+        setNotifications((current) =>
+          current.length === 0 ? FALLBACK_NOTIFICATIONS.map(normalizeNotification) : current
+        );
       }
 
       if (populationResult.status === 'fulfilled') {
@@ -77,6 +79,33 @@ export default function OgcDashboardPage() {
   useEffect(() => {
     loadDashboard();
 
+    let eventSource = null;
+    if (token) {
+      const streamUrl = `/api/gabay/stream?access_token=${encodeURIComponent(token)}`;
+      eventSource = new EventSource(streamUrl);
+
+      eventSource.addEventListener('dashboard-updated', (event) => {
+        try {
+          const payload = JSON.parse(event.data || '{}');
+          setSyncError('');
+          loadDashboard({ silent: true });
+          if (payload?.source) {
+            setLastSyncedAt(new Date());
+          }
+        } catch {
+          loadDashboard({ silent: true });
+        }
+      });
+
+      eventSource.addEventListener('heartbeat', () => {
+        setLastSyncedAt(new Date());
+      });
+
+      eventSource.onerror = () => {
+        setSyncError('Live stream disconnected. Polling fallback remains active.');
+      };
+    }
+
     const handleRefresh = () => {
       if (document.visibilityState === 'visible') {
         loadDashboard({ silent: true });
@@ -91,11 +120,14 @@ export default function OgcDashboardPage() {
     document.addEventListener('visibilitychange', handleRefresh);
 
     return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
       window.clearInterval(id);
       window.removeEventListener('focus', handleRefresh);
       document.removeEventListener('visibilitychange', handleRefresh);
     };
-  }, []);
+  }, [token]);
 
   const [populationTab, setPopulationTab] = useState('descriptive');
 

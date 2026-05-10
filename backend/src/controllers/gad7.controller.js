@@ -2,6 +2,7 @@ import { query } from '../config/db.js';
 import { scoreGad7, GAD7_QUESTIONS } from '../services/gad7.service.js';
 import { classifyComprehensiveRisk } from '../services/riskClassifier.service.js';
 import crypto from 'crypto';
+import { emitOgcEvent } from '../services/ogcRealtime.service.js';
 
 export async function getGad7Questions(req, res, next) {
   try {
@@ -144,6 +145,12 @@ export async function submitGad7(req, res, next) {
           `Student ${req.user.studentId} scored ${scoring.totalScore} on GAD-7 (${scoring.severity}) and is classified as ${riskClassification.riskLevel} risk.`,
         ]
       );
+
+      emitOgcEvent('dashboard-updated', {
+        source: 'gad7',
+        studentId: req.user.id,
+        riskLevel: riskClassification.riskLevel,
+      });
     }
 
     return res.status(201).json({

@@ -1,6 +1,7 @@
 import { query } from '../config/db.js';
 import { scoreDASS21 } from '../services/dass21.service.js';
 import { classifyDASSRisk } from '../services/riskClassifier.service.js';
+import { emitOgcEvent } from '../services/ogcRealtime.service.js';
 
 export async function submitDass21(req, res, next) {
   try {
@@ -56,6 +57,12 @@ export async function submitDass21(req, res, next) {
           `Student ${req.user.studentId} was classified as ${riskLevel} risk.`,
         ]
       );
+
+      emitOgcEvent('dashboard-updated', {
+        source: 'dass21',
+        studentId: req.user.id,
+        riskLevel,
+      });
     }
 
     return res.status(201).json({

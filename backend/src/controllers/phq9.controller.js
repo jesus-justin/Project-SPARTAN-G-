@@ -2,6 +2,7 @@ import { query } from '../config/db.js';
 import { scorePhq9, PHQ9_QUESTIONS } from '../services/phq9.service.js';
 import { classifyComprehensiveRisk } from '../services/riskClassifier.service.js';
 import crypto from 'crypto';
+import { emitOgcEvent } from '../services/ogcRealtime.service.js';
 
 export async function getPhq9Questions(req, res, next) {
   try {
@@ -144,6 +145,12 @@ export async function submitPhq9(req, res, next) {
           `Student ${req.user.studentId} scored ${scoring.totalScore} on PHQ-9 (${scoring.severity}) and is classified as ${riskClassification.riskLevel} risk.`,
         ]
       );
+
+      emitOgcEvent('dashboard-updated', {
+        source: 'phq9',
+        studentId: req.user.id,
+        riskLevel: riskClassification.riskLevel,
+      });
     }
 
     return res.status(201).json({

@@ -3,10 +3,13 @@ import { env } from '../config/env.js';
 
 export function requireAuth(req, res, next) {
   const authHeader = req.headers.authorization || '';
-  const [scheme, token] = authHeader.split(' ');
+  const [scheme, headerToken] = authHeader.split(' ');
+  const token = headerToken || req.query.access_token || req.query.token;
 
   if (scheme !== 'Bearer' || !token) {
-    return res.status(401).json({ success: false, message: 'Missing or invalid token' });
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Missing or invalid token' });
+    }
   }
 
   try {
