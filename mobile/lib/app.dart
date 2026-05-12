@@ -7,6 +7,7 @@ import 'core/providers/auth_provider.dart';
 import 'core/services/api_service.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
+import 'features/auth/screens/facilitator_login_webview.dart';
 import 'features/consent/screens/consent_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
 import 'features/dass21/screens/dass21_screen.dart';
@@ -85,6 +86,10 @@ class _SpartanGAppState extends State<SpartanGApp> {
         GoRoute(
           path: '/signup',
           builder: (BuildContext context, GoRouterState state) => const SignupScreen(),
+        ),
+        GoRoute(
+          path: '/facilitator-login',
+          builder: (BuildContext context, GoRouterState state) => const FacilitatorLoginWebView(),
         ),
         GoRoute(
           path: '/consent',

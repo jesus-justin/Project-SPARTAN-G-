@@ -418,21 +418,34 @@ export async function getAnalyticsReport(req, res, next) {
       };
     });
 
-    // Calculate statistics
+    // Calculate statistics (provide both snake_case and camelCase fields)
+    const total = students.length;
+    const lowCount = students.filter(s => s.predicted_risk_level === 'Low').length;
+    const moderateCount = students.filter(s => s.predicted_risk_level === 'Moderate').length;
+    const highCount = students.filter(s => s.predicted_risk_level === 'High').length;
+    const crisisCount = students.filter(s => s.predicted_risk_level === 'Crisis').length;
+    const atRiskCount = students.filter(s => ['High', 'Crisis'].includes(s.predicted_risk_level)).length;
+    const avgProb = total > 0 ? (students.reduce((sum, s) => sum + (s.prediction_probability || 0), 0) / total) : 0;
+
     const summary = {
-      total_students: students.length,
-      low_risk: students.filter(s => s.predicted_risk_level === 'Low').length,
-      moderate_risk: students.filter(s => s.predicted_risk_level === 'Moderate').length,
-      high_risk: students.filter(s => s.predicted_risk_level === 'High').length,
-      crisis_risk: students.filter(s => s.predicted_risk_level === 'Crisis').length,
-      at_risk_percentage: (
-        ((students.filter(s => ['High', 'Crisis'].includes(s.predicted_risk_level)).length) / 
-         students.length * 100)
-      ).toFixed(1),
-      avg_prediction_probability: (
-        students.reduce((sum, s) => sum + (s.prediction_probability || 0), 0) / 
-        students.length
-      ).toFixed(3)
+      // snake_case (existing consumers)
+      total_students: total,
+      low_risk: lowCount,
+      moderate_risk: moderateCount,
+      high_risk: highCount,
+      crisis_risk: crisisCount,
+      at_risk_percentage: total > 0 ? (atRiskCount / total * 100).toFixed(1) : '0.0',
+      avg_prediction_probability: avgProb.toFixed(3),
+
+      // camelCase (frontend dashboard expects these)
+      totalStudents: total,
+      low: lowCount,
+      moderate: moderateCount,
+      high: highCount,
+      crisis: crisisCount,
+      atRisk: atRiskCount,
+      percentageAtRisk: total > 0 ? (atRiskCount / total * 100).toFixed(1) : '0.0',
+      avgPredictionProbability: avgProb.toFixed(3),
     };
 
     // Aggregate SHAP drivers

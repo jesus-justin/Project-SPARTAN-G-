@@ -107,6 +107,76 @@ const PredictiveAnalyticsReport = () => {
   const stats = calculateStats();
   const filteredStudents = filterAndSortStudents();
 
+  // Generate CSV from analytics data and trigger download
+  const exportCsv = () => {
+    if (!analyticsData) return;
+
+    const rows = [];
+
+    // Summary header
+    rows.push(['Report', 'Predictive Analytics']);
+    rows.push(['Generated', new Date().toLocaleString()]);
+    rows.push(['Total Students', stats.totalStudents || stats.total_students || 0]);
+    rows.push(['At-Risk (High+Crisis)', stats.atRisk || 0]);
+    rows.push(['Percentage At-Risk', stats.percentageAtRisk || stats.at_risk_percentage || '0.0']);
+    rows.push([]);
+
+    // Column headers for students
+    rows.push([
+      'Student Name',
+      'User ID',
+      'Student ID',
+      'Risk Level',
+      'Probability',
+      'Top Driver',
+      'Recommendation',
+      'DASS21',
+      'PHQ9',
+      'GAD7',
+      'Trajectory',
+      'SHAP Drivers (JSON)',
+      'Last Updated'
+    ]);
+
+    // Student rows
+    (analyticsData.students || []).forEach((s) => {
+      const topDriver = s.shap_drivers && s.shap_drivers.length > 0 ? s.shap_drivers[0].feature : '';
+      rows.push([
+        s.name || '',
+        s.user_id || '',
+        s.student_id || '',
+        s.predicted_risk_level || s.risk_level || '',
+        ((s.prediction_probability || 0) * 100).toFixed(1) + '%',
+        topDriver,
+        s.recommendation || '',
+        s.dass21_score || s.dass21 || '',
+        s.phq9_score || s.phq9 || '',
+        s.gad7_score || s.gad7 || '',
+        s.trajectory || '',
+        JSON.stringify(s.shap_drivers || []),
+        s.created_at ? new Date(s.created_at).toLocaleString() : ''
+      ]);
+    });
+
+    // Convert to CSV text, escaping quotes
+    const csvText = rows.map(r => r.map(field => {
+      if (field === null || field === undefined) return '';
+      const str = String(field);
+      return '"' + str.replace(/"/g, '""') + '"';
+    }).join(',')).join('\n');
+
+    const blob = new Blob([csvText], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    a.download = `predictive_report_${ts}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="predictive-report-container">
       <h1>📊 Predictive Analytics Report</h1>
@@ -354,9 +424,14 @@ const PredictiveAnalyticsReport = () => {
 
       {/* Refresh Button */}
       <section className="refresh-section">
-        <button className="refresh-btn" onClick={fetchAnalyticsData}>
-          🔄 Refresh Report
-        </button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button className="refresh-btn" onClick={fetchAnalyticsData}>
+            🔄 Refresh Report
+          </button>
+          <button className="export-btn" onClick={exportCsv} title="Export report as CSV">
+            ⤓ Export CSV
+          </button>
+        </div>
         <p className="last-update">
           Last updated: {new Date().toLocaleString()}
         </p>
