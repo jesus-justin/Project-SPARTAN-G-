@@ -30,7 +30,7 @@ const LEVELS = ['Low', 'Moderate', 'High', 'Crisis'];
 
 export default function PopulationDashboard({ data }) {
   const [timeWindow, setTimeWindow] = useState('7');
-  const windowData = data?.[`summary_${timeWindow}d`] || {};
+  const windowData = data?.riskDistribution?.[`summary_${timeWindow}d`] || data?.[`summary_${timeWindow}d`] || {};
 
   const riskCounts = {
     Low: Number(windowData.Low || 0),
@@ -135,7 +135,7 @@ export default function PopulationDashboard({ data }) {
           <h3 style={{ marginTop: 0 }}>Top SHAP Drivers</h3>
           {(data?.topShapDrivers || []).length ? (
             <div style={{ display: 'grid', gap: 12 }}>
-              {data.topShapDrivers.map((driver, index) => (
+              {(data.topShapDrivers || data?.predictiveAnalytics?.topShapDrivers || []).map((driver, index) => (
                 <div key={`${driver.feature}-${index}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 12px', border: '1px solid #eee', borderRadius: 10 }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>{driver.feature}</div>
@@ -156,18 +156,18 @@ export default function PopulationDashboard({ data }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16, marginBottom: 24 }}>
         <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid #ddd' }}>
           <h3 style={{ marginTop: 0, marginBottom: 16 }}>By College</h3>
-          {renderStackedBars(data?.byCollege || [], 'college', 'No college data available.')}
+          {renderStackedBars(data?.cohortAnalysis?.byCollege || data?.byCollege || [], 'college', 'No college data available.')}
         </div>
 
         <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid #ddd' }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>By Sex</h3>
-          {renderStackedBars(data?.bySex || [], 'sex', 'No sex data available.')}
+          <h3 style={{ marginTop: 0, marginBottom: 16 }}>By Program</h3>
+          {renderStackedBars(data?.cohortAnalysis?.byProgram || data?.byProgram || [], 'program', 'No program data available.')}
         </div>
       </div>
 
       <div style={{ background: '#fff', padding: 20, borderRadius: 12, border: '1px solid #ddd' }}>
         <h3 style={{ marginTop: 0, marginBottom: 16 }}>By Year Level</h3>
-        {renderStackedBars(data?.byYearLevel || [], 'yearLevel', 'No year-level data available.')}
+        {renderStackedBars(data?.cohortAnalysis?.byYearLevel || data?.byYearLevel || [], 'yearLevel', 'No year-level data available.')}
       </div>
     </div>
   );

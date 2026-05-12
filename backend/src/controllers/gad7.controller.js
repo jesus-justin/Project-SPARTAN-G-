@@ -142,7 +142,7 @@ export async function submitGad7(req, res, next) {
           facilitatorId,
           riskClassification.riskLevel,
           `${riskClassification.riskLevel} Risk Alert - GAD-7`,
-          `Student ${req.user.studentId} scored ${scoring.totalScore} on GAD-7 (${scoring.severity}) and is classified as ${riskClassification.riskLevel} risk.`,
+          `A student scored ${scoring.totalScore} on GAD-7 (${scoring.severity}) and is classified as ${riskClassification.riskLevel} risk.`,
         ]
       );
 

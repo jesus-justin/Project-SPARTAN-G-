@@ -31,6 +31,60 @@ CORS(app)
 pipeline = None
 predictor = None
 
+
+def _build_feature_frame(feature_data):
+    """Build a model-ready feature frame from a payload or assessment row."""
+    normalized = {
+        'dass21_score': feature_data.get('dass21_score', 0),
+        'phq9_score': feature_data.get('phq9_score', 0),
+        'gad7_score': feature_data.get('gad7_score', 0),
+        'mood_slope': feature_data.get('mood_slope', 0),
+        'energy_slope': feature_data.get('energy_slope', 0),
+        'esm_entries_7d': feature_data.get('esm_entries_7d', 0),
+        'year_level': feature_data.get('year_level', 2),
+        'sex_encoded': 1 if feature_data.get('sex') == 'M' else 0,
+        'dass_trend': feature_data.get('dass_trend', 0),
+        'phq_trend': feature_data.get('phq_trend', 0),
+        'gad_trend': feature_data.get('gad_trend', 0),
+        'at_risk_percentage': feature_data.get('at_risk_percentage', 0),
+        'high_risk_frequency': feature_data.get('high_risk_frequency', 0),
+        'days_since_last': feature_data.get('days_since_last', 0),
+        'assessment_count': feature_data.get('assessment_count', 1),
+        'total_appointments': feature_data.get('total_appointments', 0),
+        'completed_appointments': feature_data.get('completed_appointments', 0),
+        'trajectory_numeric': {
+            'Stable': 0,
+            'Deteriorating': 1,
+            'At-Risk': 2,
+            'Insufficient Data': -1
+        }.get(feature_data.get('trajectory'), feature_data.get('trajectory_numeric', -1))
+    }
+
+    return pd.DataFrame([normalized])
+
+
+def _build_standard_prediction(user_id, prediction, case_id=None):
+    risk_probability = {
+        'Low': float(max(0.0, 1.0 - prediction['prediction_probability'])),
+        'Moderate': 0.0,
+        'High': float(prediction['prediction_probability']),
+        'Crisis': float(prediction['prediction_probability']) if prediction['predicted_risk_level'] == 'Crisis' else 0.0,
+    }
+    top_driver = prediction.get('shap_drivers', [{}])[0]
+
+    return {
+        'userId': user_id,
+        'caseId': case_id or f'CASE-{user_id}',
+        'predictedRisk': prediction.get('predicted_risk_level', 'Unknown'),
+        'riskProbability': risk_probability,
+        'shapValues': prediction.get('shap_drivers', []),
+        'topDriver': top_driver.get('feature', ''),
+        'topDriverImpact': float(top_driver.get('shap_value', 0.0)) if top_driver else 0.0,
+        'recommendation': prediction.get('recommendation', ''),
+        'modelUsed': prediction.get('model', 'XGBoost with SHAP'),
+        'generatedAt': datetime.now().isoformat()
+    }
+
 # Database configuration
 DB_CONFIG = {
     'host': os.getenv('DB_HOST', 'localhost'),
@@ -105,46 +159,18 @@ def predict_student(user_id):
                 'error': f'No assessment found for user {user_id}'
             }), 404
         
-        # Prepare features matching training pipeline
-        feature_data = {
-            'dass21_score': assessment.get('dass21_score', 0),
-            'phq9_score': assessment.get('phq9_score', 0),
-            'gad7_score': assessment.get('gad7_score', 0),
-            'mood_slope': assessment.get('mood_slope', 0),
-            'energy_slope': assessment.get('energy_slope', 0),
-            'esm_entries_7d': assessment.get('esm_entries_7d', 0),
-            'year_level': assessment.get('year_level', 2),
-            'sex_encoded': 1 if assessment.get('sex') == 'M' else 0,
-            'dass_trend': 0,
-            'phq_trend': 0,
-            'gad_trend': 0,
-            'at_risk_percentage': 0,
-            'high_risk_frequency': 0,
-            'days_since_last': 0,
-            'assessment_count': 1,
-            'total_appointments': assessment.get('total_appointments', 0),
-            'completed_appointments': assessment.get('completed_appointments', 0),
-            'trajectory_numeric': {
-                'Stable': 0,
-                'Deteriorating': 1,
-                'At-Risk': 2,
-                'Insufficient Data': -1
-            }.get(assessment.get('trajectory'), -1)
-        }
-        
-        # Create DataFrame
-        X = pd.DataFrame([feature_data])
+        X = _build_feature_frame(assessment)
         
         # Get prediction with SHAP explanation
         prediction = predictor.predict_with_shap(X)
+        standard_prediction = _build_standard_prediction(user_id, prediction)
         
         # Include baseline rule-based classification for comparison
         current_rule_based = assessment.get('risk_level', 'Unknown')
         
         return jsonify({
             'success': True,
-            'user_id': user_id,
-            'prediction': prediction,
+            'data': standard_prediction,
             'current_rule_based_risk': current_rule_based,
             'timestamp': datetime.now().isoformat()
         })
@@ -161,7 +187,7 @@ def predict_batch():
     """
     Batch prediction for multiple students
     POST /api/predict/batch
-    Body: { "user_ids": [1, 2, 3, ...] }
+    Body: { "userIds": [1, 2, 3, ...], "features": [{...}, {...}] }
     """
     try:
         if predictor.xgb_model is None:
@@ -170,64 +196,52 @@ def predict_batch():
                 'error': 'Models not trained. Call /api/train first'
             }), 400
         
-        data = request.get_json()
-        user_ids = data.get('user_ids', [])
+        data = request.get_json(silent=True) or {}
+        user_ids = data.get('userIds') or data.get('user_ids') or []
+        features = data.get('features') or []
         
         if not user_ids:
             return jsonify({
                 'success': False,
-                'error': 'No user_ids provided'
+                'error': 'No userIds provided'
             }), 400
         
         predictions = []
-        for user_id in user_ids:
+        for index, user_id in enumerate(user_ids):
             try:
-                assessment = pipeline.get_latest_student_assessment(user_id)
-                if assessment:
-                    feature_data = {
-                        'dass21_score': assessment.get('dass21_score', 0),
-                        'phq9_score': assessment.get('phq9_score', 0),
-                        'gad7_score': assessment.get('gad7_score', 0),
-                        'mood_slope': assessment.get('mood_slope', 0),
-                        'energy_slope': assessment.get('energy_slope', 0),
-                        'esm_entries_7d': assessment.get('esm_entries_7d', 0),
-                        'year_level': assessment.get('year_level', 2),
-                        'sex_encoded': 1 if assessment.get('sex') == 'M' else 0,
-                        'dass_trend': 0,
-                        'phq_trend': 0,
-                        'gad_trend': 0,
-                        'at_risk_percentage': 0,
-                        'high_risk_frequency': 0,
-                        'days_since_last': 0,
-                        'assessment_count': 1,
-                        'total_appointments': assessment.get('total_appointments', 0),
-                        'completed_appointments': assessment.get('completed_appointments', 0),
-                        'trajectory_numeric': {
-                            'Stable': 0,
-                            'Deteriorating': 1,
-                            'At-Risk': 2,
-                            'Insufficient Data': -1
-                        }.get(assessment.get('trajectory'), -1)
-                    }
-                    
-                    X = pd.DataFrame([feature_data])
-                    pred = predictor.predict_with_shap(X)
+                payload = features[index] if index < len(features) and isinstance(features[index], dict) else None
+                assessment = payload or pipeline.get_latest_student_assessment(user_id)
+
+                if not assessment:
                     predictions.append({
-                        'user_id': user_id,
-                        'prediction': pred,
-                        'status': 'success'
+                        'userId': user_id,
+                        'caseId': f'CASE-{user_id}',
+                        'status': 'error',
+                        'error': f'No assessment found for user {user_id}'
                     })
+                    continue
+
+                X = _build_feature_frame(assessment)
+                pred = predictor.predict_with_shap(X)
+                predictions.append({
+                    'status': 'success',
+                    'data': _build_standard_prediction(user_id, pred, assessment.get('caseId'))
+                })
             except Exception as e:
                 logger.warning(f"Error predicting for user {user_id}: {str(e)}")
                 predictions.append({
-                    'user_id': user_id,
+                    'userId': user_id,
+                    'caseId': f'CASE-{user_id}',
                     'status': 'error',
                     'error': str(e)
                 })
         
         return jsonify({
             'success': True,
-            'predictions': predictions,
+            'data': {
+                'predictions': [item['data'] for item in predictions if item.get('status') == 'success'],
+                'errors': [item for item in predictions if item.get('status') != 'success']
+            },
             'timestamp': datetime.now().isoformat()
         })
     

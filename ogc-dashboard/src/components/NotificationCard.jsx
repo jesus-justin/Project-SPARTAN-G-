@@ -10,9 +10,8 @@ const RISK_COLORS = {
 export default function NotificationCard({ notification, onAcknowledge }) {
   const color = RISK_COLORS[notification.riskLevel] || RISK_COLORS.Low;
   const isCrisis = notification.riskLevel === 'Crisis';
-  const displayId = notification.caseId || notification.studentId || `#${notification.id}`;
+  const displayId = notification.caseId || `CASE-UNKNOWN`;
   const isSeen = Boolean(notification.seen ?? notification.acknowledged);
-  const studentLabel = notification.studentName || (notification.studentId ? `Student ${notification.studentId}` : 'Student record');
 
   return (
     <article
@@ -26,31 +25,27 @@ export default function NotificationCard({ notification, onAcknowledge }) {
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <strong>Case {displayId}</strong>
-        <span style={{ color }}>{notification.riskLevel}</span>
+        <strong>Case #{displayId}</strong>
+        <span style={{ color, fontWeight: 700 }}>{notification.riskLevel}</span>
       </div>
 
-      {!isCrisis && (
-        <p style={{ marginBottom: 10 }}>
-          Student details hidden. Open only when required for intervention.
-        </p>
-      )}
-
-      {isCrisis && (
-        <p style={{ marginBottom: 10 }}>
-          {studentLabel} {notification.studentId ? `(${notification.studentId})` : ''}
-        </p>
-      )}
+      <p style={{ margin: '10px 0 8px 0', fontWeight: 600 }}>{notification.assessmentType}</p>
+      <p style={{ margin: '0 0 8px 0' }}>Score: {notification.score ?? 'N/A'}</p>
+      <p style={{ margin: '0 0 12px 0', color: '#666' }}>{notification.timeAgo}</p>
 
       <div style={{ display: 'flex', gap: 10 }}>
-        <Link to={`/students/${displayId}`} state={{ notification }}>
-          View details
-        </Link>
+        {isCrisis ? (
+          <Link to={`/students/${displayId}`} state={{ notification }}>
+            View Details
+          </Link>
+        ) : (
+          <span style={{ color: '#777' }}>View Details available only for Crisis cases</span>
+        )}
         {isSeen && (
           <span style={{ color: '#2e7d32', fontWeight: 600 }}>Seen</span>
         )}
         {!isSeen && (
-          <button onClick={() => onAcknowledge(notification.id)}>Acknowledge</button>
+          <button onClick={() => onAcknowledge(notification.caseId)}>Acknowledge</button>
         )}
       </div>
     </article>

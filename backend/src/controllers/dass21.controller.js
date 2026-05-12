@@ -54,7 +54,7 @@ export async function submitDass21(req, res, next) {
           facilitatorId,
           riskLevel,
           `${riskLevel} Risk Alert`,
-          `Student ${req.user.studentId} was classified as ${riskLevel} risk.`,
+          `A student was classified as ${riskLevel} risk after completing DASS-21.`,
         ]
       );
 

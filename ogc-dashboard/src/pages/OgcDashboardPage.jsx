@@ -7,15 +7,17 @@ import PopulationDashboard from '../components/PopulationDashboard';
 import { useFacilitatorAuth } from '../context/FacilitatorAuthContext';
 
 const FALLBACK_NOTIFICATIONS = [
-  { id: 1, caseId: 'A1023', riskLevel: 'Moderate', acknowledged: false },
-  { id: 2, caseId: 'A1024', riskLevel: 'High', acknowledged: false },
+  { notif_id: 'fallback-1', caseId: 'CASE-2026-001', riskLevel: 'Moderate', assessmentType: 'PHQ-9 (Depression)', score: 12, timeAgo: '2 hours ago', acknowledged: false, isAnonymized: true },
+  { notif_id: 'fallback-2', caseId: 'CASE-2026-002', riskLevel: 'High', assessmentType: 'GAD-7 (Anxiety)', score: 16, timeAgo: '4 hours ago', acknowledged: false, isAnonymized: true },
   {
-    id: 3,
-    caseId: 'A1025',
+    notif_id: 'fallback-3',
+    caseId: 'CASE-2026-003',
     riskLevel: 'Crisis',
     acknowledged: false,
-    studentName: 'Juan Dela Cruz',
-    studentId: '2020-00001',
+    assessmentType: 'DASS-21 (Stress)',
+    score: 26,
+    timeAgo: '1 day ago',
+    isAnonymized: true,
   },
 ];
 
@@ -31,14 +33,16 @@ export default function OgcDashboardPage() {
 
   const normalizeNotification = (item) => ({
     ...item,
-    caseId: item.caseId ?? item.studentId ?? `#${item.id}`,
-    studentId: item.studentId ?? item.caseId ?? null,
-    studentName: item.studentName ?? item.student_name ?? '',
+    notif_id: item.notif_id ?? item.id ?? null,
+    caseId: item.caseId ?? `CASE-UNKNOWN`,
     riskLevel: item.riskLevel ?? item.risk_level ?? 'Low',
-    shapDrivers: Array.isArray(item.shapDrivers) ? item.shapDrivers : [],
+    assessmentType: item.assessmentType ?? item.assessment_type ?? 'Assessment Summary',
+    score: Number(item.score ?? 0),
+    timeAgo: item.timeAgo ?? item.time_ago ?? '',
+    isAnonymized: Boolean(item.isAnonymized ?? true),
     acknowledged: Boolean(item.acknowledged ?? item.seen),
     seen: Boolean(item.seen ?? item.acknowledged),
-    trajectory: item.trajectory ?? 'Unknown',
+    acknowledgedAt: item.acknowledgedAt ?? item.acknowledged_at ?? null,
   });
 
   const loadDashboard = async ({ silent = false } = {}) => {
@@ -149,7 +153,9 @@ export default function OgcDashboardPage() {
 
     setNotifications((prev) =>
       prev.map((item) =>
-        item.id === notificationId ? { ...item, acknowledged: true, seen: true } : item
+        item.caseId === notificationId || item.notif_id === notificationId
+          ? { ...item, acknowledged: true, seen: true, acknowledgedAt: new Date().toISOString() }
+          : item
       )
     );
   };
@@ -219,7 +225,7 @@ export default function OgcDashboardPage() {
           ) : (
             notifications.map((notification) => (
               <NotificationCard
-                key={notification.id}
+                key={notification.notif_id || notification.caseId}
                 notification={notification}
                 onAcknowledge={onAcknowledge}
               />

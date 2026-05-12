@@ -142,7 +142,7 @@ export async function submitPhq9(req, res, next) {
           facilitatorId,
           riskClassification.riskLevel,
           `${riskClassification.riskLevel} Risk Alert - PHQ-9`,
-          `Student ${req.user.studentId} scored ${scoring.totalScore} on PHQ-9 (${scoring.severity}) and is classified as ${riskClassification.riskLevel} risk.`,
+          `A student scored ${scoring.totalScore} on PHQ-9 (${scoring.severity}) and is classified as ${riskClassification.riskLevel} risk.`,
         ]
       );
 

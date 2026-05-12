@@ -76,7 +76,7 @@ async function main() {
     await pool.query(
       `INSERT INTO ogc_notifications (student_id, facilitator_user_id, risk_level, title, body, seen)
        VALUES (?, ?, ?, ?, ?, 0)`,
-      [studentRow.id, facilitatorRow.id, 'High', 'High Risk Alert', 'Student 2025-TEST-01 was classified as High risk.',]
+      [studentRow.id, facilitatorRow.id, 'High', 'High Risk Alert', 'A student was classified as High risk after completing an assessment.',]
     );
 
     console.log('Notification seeded successfully');

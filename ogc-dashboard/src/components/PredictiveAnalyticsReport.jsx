@@ -29,7 +29,7 @@ const PredictiveAnalyticsReport = () => {
       if (!response.ok) throw new Error('Failed to fetch predictions');
       
       const data = await response.json();
-      setAnalyticsData(data);
+      setAnalyticsData(data.data || data);
     } catch (err) {
       console.error('Error fetching analytics:', err);
       setError(err.message);
@@ -68,27 +68,50 @@ const PredictiveAnalyticsReport = () => {
     }
   };
 
-  // Calculate risk statistics
+  const report = analyticsData || {};
+  const predictions = report.predictiveAnalytics?.predictions || [];
+  const topDrivers = report.predictiveAnalytics?.topShapDrivers || report.top_drivers || [];
+
+  const getProbabilityValue = (entry) => {
+    const riskProbability = entry?.riskProbability || entry?.risk_probability || {};
+    const values = Object.values(riskProbability);
+    return values.length > 0 ? Math.max(...values) : Number(entry?.prediction_probability || 0);
+  };
+
   const calculateStats = () => {
-    if (!analyticsData?.summary) return {};
-    return analyticsData.summary;
+    const totalStudents = Number(report.totalStudentsMonitored || 0);
+    const recommendationBuckets = Array.isArray(report.prescriptiveRecommendations)
+      ? report.prescriptiveRecommendations
+      : [];
+    const byRisk = (riskLevel) => Number(recommendationBuckets.find((item) => item.riskLevel === riskLevel)?.count || 0);
+    const atRisk = byRisk('High') + byRisk('Crisis');
+
+    return {
+      totalStudents,
+      atRisk,
+      crisis: byRisk('Crisis'),
+      high: byRisk('High'),
+      moderate: byRisk('Moderate'),
+      low: byRisk('Low'),
+      percentageAtRisk: totalStudents > 0 ? ((atRisk / totalStudents) * 100).toFixed(1) : '0.0',
+    };
   };
 
   const filterAndSortStudents = () => {
-    if (!analyticsData?.students) return [];
-    
-    let filtered = analyticsData.students;
+    if (!predictions.length) return [];
+
+    let filtered = predictions.slice();
     
     if (selectedRiskLevel !== 'all') {
-      filtered = filtered.filter(s => s.predicted_risk_level === selectedRiskLevel);
+      filtered = filtered.filter((s) => (s.predictedRisk || s.predicted_risk_level || 'Low') === selectedRiskLevel);
     }
     
     // Sort
     filtered.sort((a, b) => {
       if (sortBy === 'risk_probability') {
-        return b.prediction_probability - a.prediction_probability;
+        return getProbabilityValue(b) - getProbabilityValue(a);
       } else if (sortBy === 'name') {
-        return (a.name || '').localeCompare(b.name || '');
+        return (a.caseId || '').localeCompare(b.caseId || '');
       }
       return 0;
     });
@@ -116,45 +139,31 @@ const PredictiveAnalyticsReport = () => {
     // Summary header
     rows.push(['Report', 'Predictive Analytics']);
     rows.push(['Generated', new Date().toLocaleString()]);
-    rows.push(['Total Students', stats.totalStudents || stats.total_students || 0]);
+    rows.push(['Total Students', stats.totalStudents || 0]);
     rows.push(['At-Risk (High+Crisis)', stats.atRisk || 0]);
     rows.push(['Percentage At-Risk', stats.percentageAtRisk || stats.at_risk_percentage || '0.0']);
     rows.push([]);
 
     // Column headers for students
     rows.push([
-      'Student Name',
-      'User ID',
-      'Student ID',
+      'Case ID',
       'Risk Level',
       'Probability',
       'Top Driver',
-      'Recommendation',
-      'DASS21',
-      'PHQ9',
-      'GAD7',
-      'Trajectory',
       'SHAP Drivers (JSON)',
       'Last Updated'
     ]);
 
     // Student rows
-    (analyticsData.students || []).forEach((s) => {
-      const topDriver = s.shap_drivers && s.shap_drivers.length > 0 ? s.shap_drivers[0].feature : '';
+    predictions.forEach((s) => {
+      const topDriver = s.topDriver || s.top_driver || s.shapValues?.[0]?.feature || '';
       rows.push([
-        s.name || '',
-        s.user_id || '',
-        s.student_id || '',
-        s.predicted_risk_level || s.risk_level || '',
-        ((s.prediction_probability || 0) * 100).toFixed(1) + '%',
+        s.caseId || '',
+        s.predictedRisk || s.predicted_risk_level || '',
+        (getProbabilityValue(s) * 100).toFixed(1) + '%',
         topDriver,
-        s.recommendation || '',
-        s.dass21_score || s.dass21 || '',
-        s.phq9_score || s.phq9 || '',
-        s.gad7_score || s.gad7 || '',
-        s.trajectory || '',
-        JSON.stringify(s.shap_drivers || []),
-        s.created_at ? new Date(s.created_at).toLocaleString() : ''
+        JSON.stringify(s.shapValues || s.shap_values || []),
+        s.generatedAt ? new Date(s.generatedAt).toLocaleString() : (report.generatedAt ? new Date(report.generatedAt).toLocaleString() : '')
       ]);
     });
 
@@ -267,14 +276,14 @@ const PredictiveAnalyticsReport = () => {
           <label>Sort by:</label>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             <option value="risk_probability">Risk Probability (High to Low)</option>
-            <option value="name">Student Name (A-Z)</option>
+            <option value="name">Case ID (A-Z)</option>
           </select>
         </div>
       </section>
 
       {/* Student Detailed Table */}
       <section className="students-table-section">
-        <h2>Student Risk Details ({filteredStudents.length})</h2>
+        <h2>Case Risk Details ({filteredStudents.length})</h2>
         
         {filteredStudents.length === 0 ? (
           <p className="no-data">No students match the selected filter.</p>
@@ -283,32 +292,29 @@ const PredictiveAnalyticsReport = () => {
             <table className="students-table">
               <thead>
                 <tr>
-                  <th>Student Name</th>
-                  <th>ID</th>
+                  <th>Case ID</th>
                   <th>Risk Level</th>
                   <th>Probability</th>
                   <th>Top Driver</th>
-                  <th>Recommendation</th>
                   <th>Last Updated</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredStudents.map((student, idx) => (
-                  <tr key={idx} className={`risk-${student.predicted_risk_level?.toLowerCase()}`}>
+                  <tr key={idx} className={`risk-${(student.predictedRisk || student.predicted_risk_level || 'low').toLowerCase()}`}>
                     <td className="student-name">
-                      <strong>{student.name || 'N/A'}</strong>
+                      <strong>{student.caseId || 'N/A'}</strong>
                     </td>
-                    <td className="student-id">{student.user_id}</td>
                     <td>
                       <span 
                         className="risk-badge"
                         style={{
-                          backgroundColor: getRiskBgColor(student.predicted_risk_level),
-                          color: getRiskColor(student.predicted_risk_level),
+                          backgroundColor: getRiskBgColor(student.predictedRisk || student.predicted_risk_level),
+                          color: getRiskColor(student.predictedRisk || student.predicted_risk_level),
                           fontWeight: 'bold'
                         }}
                       >
-                        {student.predicted_risk_level || 'N/A'}
+                        {student.predictedRisk || student.predicted_risk_level || 'N/A'}
                       </span>
                     </td>
                     <td className="probability">
@@ -316,21 +322,18 @@ const PredictiveAnalyticsReport = () => {
                         <div 
                           className="prob-fill"
                           style={{
-                            width: `${(student.prediction_probability || 0) * 100}%`,
-                            backgroundColor: getRiskColor(student.predicted_risk_level)
+                            width: `${getProbabilityValue(student) * 100}%`,
+                            backgroundColor: getRiskColor(student.predictedRisk || student.predicted_risk_level)
                           }}
                         />
                       </div>
-                      <span>{((student.prediction_probability || 0) * 100).toFixed(1)}%</span>
+                      <span>{(getProbabilityValue(student) * 100).toFixed(1)}%</span>
                     </td>
                     <td className="top-driver">
-                      {student.shap_drivers?.[0]?.feature || 'N/A'}
-                    </td>
-                    <td className="recommendation">
-                      <small>{student.recommendation || 'Monitor regularly'}</small>
+                      {student.topDriver || student.top_driver || student.shapValues?.[0]?.feature || 'N/A'}
                     </td>
                     <td className="timestamp">
-                      {new Date(student.created_at).toLocaleDateString()}
+                      {new Date(student.generatedAt || report.generatedAt || Date.now()).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
@@ -344,7 +347,7 @@ const PredictiveAnalyticsReport = () => {
       <section className="shap-analysis">
         <h2>🔍 Top Feature Drivers (Across All Students)</h2>
         <div className="drivers-grid">
-          {analyticsData?.top_drivers?.slice(0, 5).map((driver, idx) => (
+          {topDrivers.slice(0, 5).map((driver, idx) => (
             <div key={idx} className="driver-card">
               <div className="driver-rank">{idx + 1}</div>
               <h4>{driver.feature}</h4>
