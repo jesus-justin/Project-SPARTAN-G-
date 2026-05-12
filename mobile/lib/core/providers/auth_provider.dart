@@ -98,6 +98,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Mark user as authenticated (used for facilitator login)
+  void setAuthenticated(String token) {
+    _token = token;
+    _isAuthenticated = true;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   void clearError() {
     _errorMessage = null;
     notifyListeners();

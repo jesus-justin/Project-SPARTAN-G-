@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
 
 import 'package:http/http.dart' as http;
 import 'package:spartan_g/core/constants/api_constants.dart';
@@ -30,39 +32,67 @@ class ApiService {
   }
 
   Future<dynamic> get(String endpoint) async {
-    final String base = ApiConstants.baseUrl;
-    final Uri uri = Uri.parse('$base$endpoint');
-    final http.Response response = await _client.get(uri, headers: await _headers());
-    return _handleResponse(response);
+    return _requestWithFallbacks(
+      endpoint,
+      (Uri uri, Map<String, String> headers) => _client.get(uri, headers: headers),
+    );
   }
 
   Future<dynamic> post(String endpoint, {Map<String, dynamic>? body}) async {
-    final String base = ApiConstants.baseUrl;
-    final Uri uri = Uri.parse('$base$endpoint');
-    final http.Response response = await _client.post(
-      uri,
-      headers: await _headers(),
-      body: jsonEncode(body ?? <String, dynamic>{}),
+    return _requestWithFallbacks(
+      endpoint,
+      (Uri uri, Map<String, String> headers) => _client.post(
+        uri,
+        headers: headers,
+        body: jsonEncode(body ?? <String, dynamic>{}),
+      ),
     );
-    return _handleResponse(response);
   }
 
   Future<dynamic> put(String endpoint, {Map<String, dynamic>? body}) async {
-    final String base = ApiConstants.baseUrl;
-    final Uri uri = Uri.parse('$base$endpoint');
-    final http.Response response = await _client.put(
-      uri,
-      headers: await _headers(),
-      body: jsonEncode(body ?? <String, dynamic>{}),
+    return _requestWithFallbacks(
+      endpoint,
+      (Uri uri, Map<String, String> headers) => _client.put(
+        uri,
+        headers: headers,
+        body: jsonEncode(body ?? <String, dynamic>{}),
+      ),
     );
-    return _handleResponse(response);
   }
 
   Future<dynamic> delete(String endpoint) async {
-    final String base = ApiConstants.baseUrl;
-    final Uri uri = Uri.parse('$base$endpoint');
-    final http.Response response = await _client.delete(uri, headers: await _headers());
-    return _handleResponse(response);
+    return _requestWithFallbacks(
+      endpoint,
+      (Uri uri, Map<String, String> headers) => _client.delete(uri, headers: headers),
+    );
+  }
+
+  Future<dynamic> _requestWithFallbacks(
+    String endpoint,
+    Future<http.Response> Function(Uri uri, Map<String, String> headers) request,
+  ) async {
+    final List<String> baseUrls = ApiConstants.candidateBaseUrls;
+    Object? lastError;
+
+    for (final String base in baseUrls) {
+      try {
+        final Uri uri = Uri.parse('$base$endpoint');
+        final http.Response response = await request(uri, await _headers());
+        return _handleResponse(response);
+      } on SocketException catch (error) {
+        lastError = error;
+      } on TimeoutException catch (error) {
+        lastError = error;
+      } on HttpException catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (lastError != null) {
+      throw lastError;
+    }
+
+    throw const SocketException('Unable to reach API server');
   }
 
   dynamic _handleResponse(http.Response response) {

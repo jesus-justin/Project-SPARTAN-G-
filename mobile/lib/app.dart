@@ -5,11 +5,13 @@ import 'core/constants/app_colors.dart';
 import 'core/constants/app_strings.dart';
 import 'core/providers/auth_provider.dart';
 import 'core/services/api_service.dart';
+import 'core/services/storage_service.dart';
 import 'features/auth/screens/login_screen.dart';
 import 'features/auth/screens/signup_screen.dart';
-import 'features/auth/screens/facilitator_login_webview.dart';
+import 'features/auth/screens/facilitator_login_form_screen.dart';
 import 'features/consent/screens/consent_screen.dart';
 import 'features/dashboard/screens/dashboard_screen.dart';
+import 'features/dashboard/screens/facilitator_dashboard_screen.dart';
 import 'features/dass21/screens/dass21_screen.dart';
 import 'features/esm/screens/esm_checkin_screen.dart';
 import 'features/phq9/screens/phq9_screen.dart';
@@ -51,25 +53,34 @@ class _SpartanGAppState extends State<SpartanGApp> {
     _router = GoRouter(
       initialLocation: '/',
       refreshListenable: _authProvider,
-      redirect: (BuildContext context, GoRouterState state) {
+      redirect: (BuildContext context, GoRouterState state) async {
         if (_authProvider.isLoading) {
           return null;
         }
 
         final bool authenticated = _authProvider.isAuthenticated;
         final String location = state.uri.path;
-        final bool authRoute = location == '/login' || location == '/signup';
+        final bool authRoute =
+          location == '/login' ||
+          location == '/signup' ||
+          location == '/facilitator-login';
 
         if (!authenticated && !authRoute) {
           return '/login';
         }
 
         if (authenticated && authRoute) {
-          return '/dashboard';
+          // Check user role to redirect to appropriate dashboard
+          final String? role = await StorageService.getString('user_role');
+          return role == 'facilitator' ? '/facilitator-dashboard' : '/dashboard';
         }
 
         if (location == '/') {
-          return authenticated ? '/dashboard' : '/login';
+          if (!authenticated) {
+            return '/login';
+          }
+          final String? role = await StorageService.getString('user_role');
+          return role == 'facilitator' ? '/facilitator-dashboard' : '/dashboard';
         }
 
         return null;
@@ -89,7 +100,11 @@ class _SpartanGAppState extends State<SpartanGApp> {
         ),
         GoRoute(
           path: '/facilitator-login',
-          builder: (BuildContext context, GoRouterState state) => const FacilitatorLoginWebView(),
+          builder: (BuildContext context, GoRouterState state) => const FacilitatorLoginFormScreen(),
+        ),
+        GoRoute(
+          path: '/facilitator-dashboard',
+          builder: (BuildContext context, GoRouterState state) => const FacilitatorDashboardScreen(),
         ),
         GoRoute(
           path: '/consent',

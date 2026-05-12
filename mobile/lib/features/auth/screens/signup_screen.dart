@@ -267,6 +267,23 @@ class _SignupScreenState extends State<SignupScreen> {
                     child: const Text('Sign Up'),
                   ),
                 ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Already have an account?'),
+                    TextButton(
+                      onPressed: () {
+                        if (Navigator.canPop(context)) {
+                          context.pop();
+                        } else {
+                          context.go('/login');
+                        }
+                      },
+                      child: const Text('Login'),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

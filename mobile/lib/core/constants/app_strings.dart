@@ -7,6 +7,7 @@ class AppStrings {
   static const String tokenKey = 'spartan_jwt_token';
   
   // OGC Portal URL (use 10.0.2.2 for Android emulator, localhost for iOS simulator, actual host IP for physical devices)
-  static const String ogcPortalLoginUrl = 'http://10.0.2.2:5174/#/login';
-  static const String ogcPortalDashboardUrl = 'http://10.0.2.2:5174/#/dashboard';
+  // For physical device use local IP (detected 192.168.1.5). Update as needed.
+  static const String ogcPortalLoginUrl = 'http://192.168.1.5:5174/#/login';
+  static const String ogcPortalDashboardUrl = 'http://192.168.1.5:5174/#/dashboard';
 }

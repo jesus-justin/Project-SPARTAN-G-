@@ -190,13 +190,21 @@ class _LoginScreenState extends State<LoginScreen> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             TextButton(
-                              onPressed: () => context.go('/signup'),
+                              onPressed: () => context.push('/signup'),
                               child: const Text("Don't have an account? Sign Up"),
                             ),
                             const SizedBox(height: 6),
-                            TextButton(
-                              onPressed: _openFacilitatorLogin,
-                              child: const Text('Facilitator Login?'),
+                            SizedBox(
+                              height: 44,
+                              child: OutlinedButton(
+                                onPressed: _openFacilitatorLogin,
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide.none,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  foregroundColor: AppColors.primaryRed,
+                                ),
+                                child: const Text('Facilitator Login?'),
+                              ),
                             ),
                           ],
                         ),
@@ -213,6 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _openFacilitatorLogin() async {
+    debugPrint('Opening facilitator login from LoginScreen');
     context.push('/facilitator-login');
   }
 }
