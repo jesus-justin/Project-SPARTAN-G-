@@ -7,7 +7,7 @@ const RISK_COLORS = {
   Crisis: '#D32F2F',
 };
 
-export default function NotificationCard({ notification, onAcknowledge, showAcknowledge = true }) {
+export default function NotificationCard({ notification, onAcknowledge, onDelete, showAcknowledge = true, showDelete = false }) {
   const color = RISK_COLORS[notification.riskLevel] || RISK_COLORS.Low;
   const isCrisis = notification.riskLevel === 'Crisis';
   const displayId = notification.caseId || `CASE-UNKNOWN`;
@@ -54,6 +54,11 @@ export default function NotificationCard({ notification, onAcknowledge, showAckn
         )}
         {!isSeen && showAcknowledge && (
           <button onClick={() => onAcknowledge(notification.caseId)}>Acknowledge</button>
+        )}
+        {showDelete && (
+          <button onClick={() => onDelete?.(notification.caseId)} style={{ background: '#f5f5f5' }}>
+            Delete
+          </button>
         )}
       </div>
     </article>

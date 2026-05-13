@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { acknowledgeNotification, getNotificationHistory, getNotifications, getPopulationDashboard } from '../api/ogc.api';
+import { acknowledgeNotification, deleteNotification, getNotificationHistory, getNotifications, getPopulationDashboard } from '../api/ogc.api';
 import NotificationCard from '../components/NotificationCard';
 import UnreadBadge from '../components/UnreadBadge';
 import PopulationDashboard from '../components/PopulationDashboard';
@@ -171,6 +171,22 @@ export default function OgcDashboardPage() {
     }
   };
 
+  const onDeleteHistoryItem = async (notificationId) => {
+    const confirmed = window.confirm('Delete this history item? This cannot be undone.');
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteNotification(notificationId);
+    } catch {
+      return;
+    }
+
+    setHistoryNotifications((prev) => prev.filter((item) => item.caseId !== notificationId && item.notif_id !== notificationId));
+    setNotifications((prev) => prev.filter((item) => item.caseId !== notificationId && item.notif_id !== notificationId));
+  };
+
   return (
     <div style={{ maxWidth: 1200, margin: '24px auto', padding: 16 }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -272,7 +288,9 @@ export default function OgcDashboardPage() {
                 key={notification.notif_id || notification.caseId}
                 notification={notification}
                 onAcknowledge={onAcknowledge}
+                onDelete={onDeleteHistoryItem}
                 showAcknowledge={false}
+                showDelete
               />
             ))
           )}

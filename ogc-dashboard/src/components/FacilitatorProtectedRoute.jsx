@@ -1,9 +1,8 @@
 import { Navigate, useLocation } from 'react-router-dom';
-import { useFacilitatorAuth } from '../context/FacilitatorAuthContext';
 
 export default function FacilitatorProtectedRoute({ children }) {
   const location = useLocation();
-  const { isAuthenticated } = useFacilitatorAuth();
+  const isAuthenticated = Boolean(localStorage.getItem('ogc_token'));
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;

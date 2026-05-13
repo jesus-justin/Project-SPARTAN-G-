@@ -20,6 +20,11 @@ export async function acknowledgeNotification(notificationId) {
   return data;
 }
 
+export async function deleteNotification(notificationId) {
+  const { data } = await client.delete(`/gabay/notifications/${notificationId}`);
+  return data;
+}
+
 export async function getPopulationDashboard() {
   const { data } = await client.get('/gabay/population-dashboard');
   return data;

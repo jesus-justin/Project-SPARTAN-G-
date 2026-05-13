@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { emitOgcEvent, subscribeOgcEvent } from '../services/ogcRealtime.service.js';
 import crypto from 'crypto';
 
 class ForbiddenError extends Error {
@@ -557,6 +558,72 @@ export async function acknowledgeNotification(req, res, next) {
         seen: Boolean(updated.rows[0].seen),
         acknowledged: Boolean(updated.rows[0].seen),
         acknowledgedAt: updated.rows[0].updated_at,
+      },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function deleteNotification(req, res, next) {
+  try {
+    if (req.user.role !== 'facilitator') {
+      return res.status(403).json({ success: false, message: 'Facilitator access required' });
+    }
+
+    const { id } = req.params;
+
+    let notificationId = null;
+    if (/^\d+$/.test(String(id))) {
+      notificationId = Number(id);
+    } else {
+      const notificationLookup = await query(
+        `SELECT id FROM ogc_notifications
+         WHERE CONCAT('CASE-', YEAR(created_at), '-', LPAD(id, 3, '0')) = $1
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [id]
+      );
+
+      if (notificationLookup.rowCount === 0) {
+        return res.status(404).json({ success: false, message: 'Notification not found' });
+      }
+
+      notificationId = notificationLookup.rows[0].id;
+    }
+
+    const selected = await query(
+      `SELECT id, risk_level, title, body, seen, created_at, updated_at
+       FROM ogc_notifications WHERE id = $1`,
+      [notificationId]
+    );
+
+    if (selected.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    const result = await query(
+      `DELETE FROM ogc_notifications WHERE id = $1`,
+      [notificationId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    emitOgcEvent('dashboard-updated', {
+      source: 'notification-deleted',
+      notificationId,
+      caseId: buildCaseId(selected.rows[0].id, selected.rows[0].created_at),
+      riskLevel: selected.rows[0].risk_level,
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        notif_id: crypto.randomUUID(),
+        caseId: buildCaseId(selected.rows[0].id, selected.rows[0].created_at),
+        deleted: true,
       },
     });
   } catch (error) {

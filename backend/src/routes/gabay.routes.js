@@ -5,6 +5,7 @@ import {
   getNotifications,
   getNotificationHistory,
   acknowledgeNotification,
+  deleteNotification,
   getStudentDetail,
   // new
   getCaseMapping,
@@ -24,6 +25,7 @@ router.get('/population-dashboard', getPopulationDashboard);
 router.get('/notifications', getNotifications);
 router.get('/notifications/history', getNotificationHistory);
 router.patch('/notifications/:id/acknowledge', acknowledgeNotification);
+router.delete('/notifications/:id', deleteNotification);
 
 // Case mapping: resolve pseudonymous caseId -> SR code (Crisis-only)
 router.get('/case-mapping/:caseId', getCaseMapping);
