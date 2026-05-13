@@ -29,7 +29,12 @@ export function AuthProvider({ children }) {
       }
       try {
         const response = await getMe();
-        setUser(response.data);
+        const account = response.data;
+        if (account?.role !== 'student') {
+          logout();
+          return;
+        }
+        setUser(account);
       } catch {
         logout();
       } finally {
@@ -44,6 +49,11 @@ export function AuthProvider({ children }) {
     const response = await loginApi(credentials);
     const jwt = response.data?.token;
     const account = response.data?.user;
+
+    if (account?.role !== 'student') {
+      throw new Error('Student access only');
+    }
+
     localStorage.setItem('spartan_token', jwt);
     setToken(jwt);
     setUser(account);
@@ -65,7 +75,7 @@ export function AuthProvider({ children }) {
       token,
       user,
       loading,
-      isAuthenticated: Boolean(token),
+      isAuthenticated: Boolean(token && user?.role === 'student'),
       login,
       signup,
       logout,

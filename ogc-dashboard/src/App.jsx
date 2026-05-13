@@ -7,9 +7,14 @@ import GinhawaManagePage from './pages/GinhawaManagePage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import PredictiveAnalyticsPage from './pages/PredictiveAnalyticsPage';
 import CaseMappingPage from './pages/CaseMappingPage';
+import { useFacilitatorAuth } from './context/FacilitatorAuthContext';
 
 export default function App() {
-  const isAuthenticated = Boolean(localStorage.getItem('ogc_token'));
+  const { isAuthenticated, loading } = useFacilitatorAuth();
+
+  if (loading) {
+    return <div style={{ minHeight: '100vh', background: '#f6f6f6', padding: 24 }}>Loading...</div>;
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f6f6' }}>

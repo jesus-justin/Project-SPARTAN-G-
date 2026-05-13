@@ -54,6 +54,16 @@ npm start
 # Server runs on http://localhost:3001
 ```
 
+#### Step 3.1: Apply Legacy Role Compatibility (One-Time)
+If you merged from an older schema that expects separate `students` and `facilitators` entities:
+
+```bash
+cd c:\xampp\htdocs\Project-SPARTAN-G-\backend
+npm run migrate:legacy-compat
+```
+
+This keeps `users` as the main table while adding compatibility views.
+
 #### Step 4: Start Dashboard (Terminal 3)
 ```bash
 cd c:\xampp\htdocs\Project-SPARTAN-G-\ogc-dashboard

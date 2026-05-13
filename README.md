@@ -99,5 +99,35 @@ Frontend dev servers proxy `/api` to `http://localhost:3001`.
 - The project uses MySQL (XAMPP) for the backend database. Ensure MySQL is running and `.env` in `backend` is configured.
 - The mobile app falls back across the current laptop Wi-Fi IPs for the API and facilitator portal. If the laptop IP changes, rebuild the app so the stored candidates are refreshed.
 - Smoke tests are available at `backend/src/scripts/smoke-test.js`.
+
+## Database Roles And Legacy Compatibility
+
+SPARTAN-G uses a single `users` table for authentication and identity. Role separation is handled by `users.role`.
+
+- `student` accounts use student portal login.
+- `facilitator` accounts use OGC dashboard login.
+
+If you are integrating older code that expects separate `students` and `facilitators` entities, run:
+
+```bash
+cd backend
+npm run migrate:legacy-compat
+```
+
+What this migration does:
+
+- Ensures `users.role` exists and is populated.
+- Optionally syncs facilitator accounts from a legacy `facilitators` table when present.
+- Creates compatibility SQL views named `students` and `facilitators` when those names are not already base tables.
+
+Quick verification:
+
+```sql
+SELECT COUNT(*) AS students_count FROM students;
+SELECT COUNT(*) AS facilitators_count FROM facilitators;
+SELECT role, COUNT(*) AS total FROM users GROUP BY role;
+```
+
+Important: keep `users` as the source of truth. Do not remove it.
 # Project-SPARTAN-G-
 SPARTAN-G — Mental Health Support System for BatStateU-TNEU Lipa Campus

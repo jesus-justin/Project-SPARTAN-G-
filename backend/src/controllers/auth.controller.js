@@ -171,19 +171,19 @@ export async function login(req, res, next) {
     const result = await query(
       `SELECT id, student_id, password_hash, first_name, last_name, college, year_level, program, sex, role
        FROM users
-       WHERE student_id = $1`,
-      [studentId]
+       WHERE student_id = $1 AND role = $2`,
+      [studentId, 'student']
     );
 
     if (result.rowCount === 0) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid student credentials' });
     }
 
     const user = result.rows[0];
     const passwordOk = await bcrypt.compare(password, user.password_hash);
 
     if (!passwordOk) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid student credentials' });
     }
 
     const token = buildToken(user);

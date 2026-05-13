@@ -5,6 +5,11 @@ export async function facilitatorLogin(payload) {
   return data;
 }
 
+export async function getMe() {
+  const { data } = await client.get('/auth/me');
+  return data;
+}
+
 export async function getNotifications() {
   const { data } = await client.get('/gabay/notifications');
   return data;

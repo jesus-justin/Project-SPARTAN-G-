@@ -18,7 +18,7 @@ export default function OgcLoginPage() {
       await login(form);
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err?.response?.data?.message || 'Login failed');
+      setError(err?.response?.data?.message || err?.message || 'Login failed');
     }
   };
 
