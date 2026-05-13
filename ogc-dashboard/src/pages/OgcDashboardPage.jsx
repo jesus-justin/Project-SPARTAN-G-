@@ -87,7 +87,7 @@ export default function OgcDashboardPage() {
 
     let eventSource = null;
     if (token) {
-      const streamUrl = `/api/gabay/stream?access_token=${encodeURIComponent(token)}`;
+      const streamUrl = `/api/ogc/stream?access_token=${encodeURIComponent(token)}`;
       eventSource = new EventSource(streamUrl);
 
       eventSource.addEventListener('dashboard-updated', (event) => {
