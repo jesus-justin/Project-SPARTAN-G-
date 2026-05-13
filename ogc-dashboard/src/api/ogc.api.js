@@ -10,6 +10,11 @@ export async function getNotifications() {
   return data;
 }
 
+export async function getNotificationHistory() {
+  const { data } = await client.get('/gabay/notifications/history');
+  return data;
+}
+
 export async function acknowledgeNotification(notificationId) {
   const { data } = await client.patch(`/gabay/notifications/${notificationId}/acknowledge`);
   return data;

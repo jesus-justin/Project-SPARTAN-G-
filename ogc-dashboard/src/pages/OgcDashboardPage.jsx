@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { acknowledgeNotification, getNotifications, getPopulationDashboard } from '../api/ogc.api';
+import { acknowledgeNotification, getNotificationHistory, getNotifications, getPopulationDashboard } from '../api/ogc.api';
 import NotificationCard from '../components/NotificationCard';
 import UnreadBadge from '../components/UnreadBadge';
 import PopulationDashboard from '../components/PopulationDashboard';
@@ -26,6 +26,7 @@ export default function OgcDashboardPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('notifications');
   const [notifications, setNotifications] = useState([]);
+  const [historyNotifications, setHistoryNotifications] = useState([]);
   const [populationData, setPopulationData] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [syncError, setSyncError] = useState('');
@@ -51,9 +52,10 @@ export default function OgcDashboardPage() {
     }
 
     try {
-      const [notificationsResult, populationResult] = await Promise.allSettled([
+      const [notificationsResult, populationResult, historyResult] = await Promise.allSettled([
         getNotifications(),
         getPopulationDashboard(),
+        getNotificationHistory(),
       ]);
 
       if (notificationsResult.status === 'fulfilled') {
@@ -72,6 +74,12 @@ export default function OgcDashboardPage() {
         setSyncError('');
       } else {
         setSyncError('Live reports are temporarily unavailable. Showing the last successful snapshot.');
+      }
+
+      if (historyResult.status === 'fulfilled') {
+        setHistoryNotifications(Array.isArray(historyResult.value.data) ? historyResult.value.data.map(normalizeNotification) : []);
+      } else {
+        setHistoryNotifications((current) => current);
       }
 
       setLastSyncedAt(new Date());
@@ -145,19 +153,22 @@ export default function OgcDashboardPage() {
   const topShapDrivers = populationData?.topShapDrivers || [];
 
   const onAcknowledge = async (notificationId) => {
+    let acknowledgedPayload = null;
     try {
-      await acknowledgeNotification(notificationId);
+      const response = await acknowledgeNotification(notificationId);
+      acknowledgedPayload = response?.data || null;
     } catch {
       // Keep UI responsive even if API endpoint is not yet available.
     }
 
     setNotifications((prev) =>
-      prev.map((item) =>
-        item.caseId === notificationId || item.notif_id === notificationId
-          ? { ...item, acknowledged: true, seen: true, acknowledgedAt: new Date().toISOString() }
-          : item
-      )
+      prev.filter((item) => item.caseId !== notificationId && item.notif_id !== notificationId)
     );
+
+    if (acknowledgedPayload) {
+      const normalizedHistoryItem = normalizeNotification(acknowledgedPayload);
+      setHistoryNotifications((prev) => [normalizedHistoryItem, ...prev.filter((item) => item.caseId !== normalizedHistoryItem.caseId)]);
+    }
   };
 
   return (
@@ -205,6 +216,20 @@ export default function OgcDashboardPage() {
           Notifications ({unreadCount})
         </button>
         <button
+          onClick={() => setActiveTab('history')}
+          style={{
+            padding: '12px 24px',
+            border: 'none',
+            background: 'transparent',
+            borderBottom: activeTab === 'history' ? '3px solid #d32f2f' : 'none',
+            cursor: 'pointer',
+            fontWeight: activeTab === 'history' ? 600 : 400,
+            color: activeTab === 'history' ? '#d32f2f' : '#666',
+          }}
+        >
+          History
+        </button>
+        <button
           onClick={() => setActiveTab('population')}
           style={{
             padding: '12px 24px',
@@ -231,6 +256,23 @@ export default function OgcDashboardPage() {
                 key={notification.notif_id || notification.caseId}
                 notification={notification}
                 onAcknowledge={onAcknowledge}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === 'history' && (
+        <div>
+          {historyNotifications.length === 0 ? (
+            <p style={{ color: '#999' }}>No acknowledged notifications yet</p>
+          ) : (
+            historyNotifications.map((notification) => (
+              <NotificationCard
+                key={notification.notif_id || notification.caseId}
+                notification={notification}
+                onAcknowledge={onAcknowledge}
+                showAcknowledge={false}
               />
             ))
           )}

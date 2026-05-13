@@ -452,7 +452,51 @@ export async function getNotifications(req, res, next) {
       acknowledgedAt: row.seen ? row.updated_at : null,
     }));
 
-    return res.json({ success: true, data: notifications });
+    return res.json({ success: true, data: notifications.filter((item) => !item.acknowledged) });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getNotificationHistory(req, res, next) {
+  try {
+    if (req.user.role !== 'facilitator') {
+      return res.status(403).json({ success: false, message: 'Facilitator access required' });
+    }
+
+    const result = await query(
+      `SELECT 
+        n.id, n.facilitator_user_id, n.risk_level, n.title, n.body, 
+        n.seen, n.created_at, n.updated_at,
+        rc.risk_level AS latest_risk_level,
+        rc.dass21_score, rc.phq9_score, rc.gad7_score
+       FROM ogc_notifications n
+       LEFT JOIN (
+         SELECT rc1.*
+         FROM risk_classifications rc1
+         INNER JOIN (
+           SELECT user_id, MAX(created_at) AS latest_created_at
+           FROM risk_classifications
+           GROUP BY user_id
+         ) latest ON latest.user_id = rc1.user_id AND latest.latest_created_at = rc1.created_at
+       ) rc ON rc.user_id = n.student_id
+       WHERE n.seen = 1
+       ORDER BY n.updated_at DESC, n.created_at DESC`);
+
+    const history = result.rows.map((row) => ({
+      notif_id: crypto.randomUUID(),
+      caseId: buildCaseId(row.id, row.created_at),
+      riskLevel: normalizeRiskLevel(row.risk_level || row.latest_risk_level),
+      assessmentType: resolveAssessmentType(row.title, row.body, row),
+      score: resolveAssessmentScore(resolveAssessmentType(row.title, row.body, row), row),
+      timeAgo: formatTimeAgo(row.created_at),
+      isAnonymized: true,
+      seen: true,
+      acknowledged: true,
+      acknowledgedAt: row.updated_at,
+    }));
+
+    return res.json({ success: true, data: history });
   } catch (error) {
     return next(error);
   }

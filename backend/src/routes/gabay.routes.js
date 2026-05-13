@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import {
   getPopulationDashboard,
   getNotifications,
+  getNotificationHistory,
   acknowledgeNotification,
   getStudentDetail,
   // new
@@ -21,6 +22,7 @@ router.get('/population-dashboard', getPopulationDashboard);
 
 // Notifications endpoints
 router.get('/notifications', getNotifications);
+router.get('/notifications/history', getNotificationHistory);
 router.patch('/notifications/:id/acknowledge', acknowledgeNotification);
 
 // Case mapping: resolve pseudonymous caseId -> SR code (Crisis-only)

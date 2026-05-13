@@ -7,10 +7,9 @@ import GinhawaManagePage from './pages/GinhawaManagePage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import PredictiveAnalyticsPage from './pages/PredictiveAnalyticsPage';
 import CaseMappingPage from './pages/CaseMappingPage';
-import { useFacilitatorAuth } from './context/FacilitatorAuthContext';
 
 export default function App() {
-  const { isAuthenticated } = useFacilitatorAuth();
+  const isAuthenticated = Boolean(localStorage.getItem('ogc_token'));
 
   return (
     <div style={{ minHeight: '100vh', background: '#f6f6f6' }}>

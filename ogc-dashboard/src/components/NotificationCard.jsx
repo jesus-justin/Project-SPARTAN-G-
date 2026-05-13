@@ -7,7 +7,7 @@ const RISK_COLORS = {
   Crisis: '#D32F2F',
 };
 
-export default function NotificationCard({ notification, onAcknowledge }) {
+export default function NotificationCard({ notification, onAcknowledge, showAcknowledge = true }) {
   const color = RISK_COLORS[notification.riskLevel] || RISK_COLORS.Low;
   const isCrisis = notification.riskLevel === 'Crisis';
   const displayId = notification.caseId || `CASE-UNKNOWN`;
@@ -46,10 +46,13 @@ export default function NotificationCard({ notification, onAcknowledge }) {
         ) : (
           <span style={{ color: '#777' }}>View Details available only for Crisis cases</span>
         )}
-        {isSeen && (
+        {isSeen && notification.acknowledgedAt && (
+          <span style={{ color: '#666' }}>Acknowledged: {new Date(notification.acknowledgedAt).toLocaleString()}</span>
+        )}
+        {isSeen && !notification.acknowledgedAt && (
           <span style={{ color: '#2e7d32', fontWeight: 600 }}>Seen</span>
         )}
-        {!isSeen && (
+        {!isSeen && showAcknowledge && (
           <button onClick={() => onAcknowledge(notification.caseId)}>Acknowledge</button>
         )}
       </div>
