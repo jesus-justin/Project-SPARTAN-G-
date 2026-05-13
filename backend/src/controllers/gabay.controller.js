@@ -447,6 +447,8 @@ export async function getNotifications(req, res, next) {
       score: resolveAssessmentScore(resolveAssessmentType(row.title, row.body, row), row),
       timeAgo: formatTimeAgo(row.created_at),
       isAnonymized: true,
+      seen: Boolean(row.seen),
+      acknowledged: Boolean(row.seen),
       acknowledgedAt: row.seen ? row.updated_at : null,
     }));
 
@@ -508,6 +510,8 @@ export async function acknowledgeNotification(req, res, next) {
         score: 0,
         timeAgo: formatTimeAgo(updated.rows[0].created_at),
         isAnonymized: true,
+        seen: Boolean(updated.rows[0].seen),
+        acknowledged: Boolean(updated.rows[0].seen),
         acknowledgedAt: updated.rows[0].updated_at,
       },
     });
