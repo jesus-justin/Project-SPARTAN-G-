@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_strings.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/storage_service.dart';
@@ -128,7 +127,7 @@ class _FacilitatorLoginFormScreenState extends State<FacilitatorLoginFormScreen>
       }
       return error.message;
     }
-    return 'Network error. Please check your connection and try again.';
+    return 'Backend is unreachable. Start MySQL and the backend server, then try again.';
   }
 
   void _goBackToLogin() {

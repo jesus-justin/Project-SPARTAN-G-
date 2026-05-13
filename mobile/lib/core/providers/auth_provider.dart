@@ -80,7 +80,7 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = _friendlyLoginErrorMessage(e);
       return false;
     } on SocketException {
-      _errorMessage = 'Cannot connect to server. Make sure you are on the network.';
+      _errorMessage = 'Backend is unreachable. Start MySQL and the backend server, then try again.';
       return false;
     } catch (_) {
       _errorMessage = 'Unable to log in. Please try again.';

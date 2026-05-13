@@ -15,9 +15,12 @@ Mental Health Support System for BatStateU-TNEU.
 1. Open XAMPP Control Panel
 2. Click Start next to MySQL
 3. Wait for MySQL to show green
+4. Confirm the backend health endpoint responds at http://localhost:3001/api/health
 
 ### Then start all services:
 Double-click `start-all.bat`
+
+The startup script now waits for the backend health check before launching the frontends. If it stops early, start MySQL in XAMPP and run it again.
 
 ### Or manually in order:
 ```bash
@@ -94,6 +97,7 @@ Frontend dev servers proxy `/api` to `http://localhost:3001`.
 ## Notes
 
 - The project uses MySQL (XAMPP) for the backend database. Ensure MySQL is running and `.env` in `backend` is configured.
+- The mobile app falls back across the current laptop Wi-Fi IPs for the API and facilitator portal. If the laptop IP changes, rebuild the app so the stored candidates are refreshed.
 - Smoke tests are available at `backend/src/scripts/smoke-test.js`.
 # Project-SPARTAN-G-
 SPARTAN-G — Mental Health Support System for BatStateU-TNEU Lipa Campus

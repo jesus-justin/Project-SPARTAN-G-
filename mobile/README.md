@@ -1,17 +1,19 @@
-# spartan_g
+# SPARTAN-G Mobile
 
-A new Flutter project.
+Flutter app for the SPARTAN-G student and facilitator portals.
 
-## Getting Started
+## Before you run it
 
-This project is a starting point for a Flutter application.
+1. Start MySQL in XAMPP.
+2. Start the backend and confirm `http://localhost:3001/api/health` returns success.
+3. If you are testing on a physical Android phone, keep the laptop and phone on the same Wi-Fi network.
 
-A few resources to get you started if this is your first Flutter project:
+## Run on Android
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```bash
+cd mobile
+flutter pub get
+flutter run -d <device-id>
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The app tries multiple local host IP candidates for the backend and facilitator portal, but if your laptop IP changes you should rebuild the app so those candidates refresh.

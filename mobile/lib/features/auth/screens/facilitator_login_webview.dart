@@ -15,6 +15,8 @@ class FacilitatorLoginWebView extends StatefulWidget {
 
 class _FacilitatorLoginWebViewState extends State<FacilitatorLoginWebView> {
   late final WebViewController _webViewController;
+  late final List<String> _portalCandidates;
+  int _candidateIndex = 0;
   bool _isLoading = true;
   String _pageTitle = 'Facilitator Login';
 
@@ -25,6 +27,10 @@ class _FacilitatorLoginWebViewState extends State<FacilitatorLoginWebView> {
   }
 
   void _initializeWebView() {
+    _portalCandidates = AppStrings.ogcPortalCandidateUrls
+        .map((String baseUrl) => '$baseUrl/#/login')
+        .toList(growable: false);
+
     _webViewController = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
@@ -42,9 +48,15 @@ class _FacilitatorLoginWebViewState extends State<FacilitatorLoginWebView> {
             _checkLoginSuccess(url);
           },
           onWebResourceError: (WebResourceError error) {
+            if (_candidateIndex < _portalCandidates.length - 1) {
+              _candidateIndex += 1;
+              _webViewController.loadRequest(Uri.parse(_portalCandidates[_candidateIndex]));
+              return;
+            }
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error loading page: ${error.description}'),
+                content: Text('Error loading facilitator portal: ${error.description}'),
               ),
             );
           },
@@ -54,7 +66,7 @@ class _FacilitatorLoginWebViewState extends State<FacilitatorLoginWebView> {
           },
         ),
       )
-      ..loadRequest(Uri.parse(AppStrings.ogcPortalLoginUrl));
+        ..loadRequest(Uri.parse(_portalCandidates.first));
   }
 
   /// Check if login was successful by inspecting the URL
@@ -112,6 +124,8 @@ class _FacilitatorLoginWebViewState extends State<FacilitatorLoginWebView> {
         }
 
         if (!mounted) return;
+        final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+        final GoRouter router = GoRouter.of(context);
 
         // Store token and facilitator info
         if (token != null) {
@@ -121,7 +135,7 @@ class _FacilitatorLoginWebViewState extends State<FacilitatorLoginWebView> {
           }
 
           // Show success snackbar
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Facilitator login successful! Returning to app...'),
               duration: Duration(seconds: 1),
@@ -131,11 +145,11 @@ class _FacilitatorLoginWebViewState extends State<FacilitatorLoginWebView> {
           // Delay and pop WebView to return to previous screen
           await Future.delayed(const Duration(seconds: 1));
           if (mounted) {
-            context.pop();
+            router.pop();
           }
         } else {
           // No token found but we're at dashboard, show message and stay in WebView
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             const SnackBar(
               content: Text('Login successful. You can now use the facilitator portal.'),
             ),

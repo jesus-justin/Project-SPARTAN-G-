@@ -8,8 +8,20 @@ echo Step 1: Please make sure XAMPP MySQL is running!
 echo Opening XAMPP Control Panel...
 start "" "C:\xampp\xampp-control.exe"
 echo.
-echo Waiting 5 seconds for MySQL to start...
-timeout /t 5 /nobreak
+echo Waiting for backend health endpoint to become available...
+for /L %%i in (1,1,12) do (
+	powershell -NoProfile -Command "try { Invoke-WebRequest -UseBasicParsing http://localhost:3001/api/health | Out-Null; exit 0 } catch { exit 1 }"
+	if not errorlevel 1 goto backend_ready
+	timeout /t 5 /nobreak >nul
+)
+echo.
+echo Backend is not ready yet.
+echo Start MySQL in XAMPP, then run this script again.
+echo.
+pause
+exit /b 1
+
+:backend_ready
 echo.
 echo Starting Backend...
 start "SPARTAN-G Backend" cmd /k "cd /d C:\xampp\htdocs\Project-SPARTAN-G-\backend && node src/server.js"

@@ -71,6 +71,8 @@ class _SignupScreenState extends State<SignupScreen> {
       'program': _programController.text.trim().isEmpty ? null : _programController.text.trim(),
       'sex': _selectedSex,
     };
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final GoRouter router = GoRouter.of(context);
 
     try {
       final dynamic resp = await api.post('/auth/register', body: body);
@@ -79,21 +81,21 @@ class _SignupScreenState extends State<SignupScreen> {
         if (token != null) {
           await StorageService.saveToken(token.toString());
           if (!mounted) return;
-          context.go('/consent');
+          router.go('/consent');
           return;
         }
       }
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign up failed')));
+      messenger.showSnackBar(const SnackBar(content: Text('Sign up failed')));
     } on ApiException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(content: Text(_friendlySignupErrorMessage(e))),
       );
     } on SocketException {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot connect to server. Make sure you are on the network.')),
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Backend is unreachable. Start MySQL and the backend server, then try again.')),
       );
     } catch (_) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Server error. Please try again later.')),
       );
     }
