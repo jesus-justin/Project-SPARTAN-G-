@@ -1,0 +1,14 @@
+# Root .gitignore for Project-SPARTAN-G
+
+# Ignore backend environment file
+/backend/.env
+
+# Node modules
+node_modules/
+
+# Vite / build outputs
+dist/
+
+# Flutter build
+mobile/build/
+mobile/.dart_tool/

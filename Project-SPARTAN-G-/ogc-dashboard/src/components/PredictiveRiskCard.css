@@ -1,0 +1,374 @@
+/* PredictiveRiskCard.css */
+.predictive-risk-card {
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #007bff;
+  border-radius: 8px;
+  background: #f9f9f9;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.predictive-risk-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.predictive-risk-card.loading,
+.predictive-risk-card.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  background: #f5f5f5;
+}
+
+.predictive-risk-card.error {
+  border-left-color: #dc3545;
+}
+
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.card-header {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-badge {
+  display: inline-block;
+  background: #e3f2fd;
+  color: #0d47a1;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 12px;
+  margin-left: auto;
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Risk Display Section */
+.risk-display {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.risk-level {
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  padding: 8px;
+}
+
+.probability {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.probability .label {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.probability .value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+}
+
+.confidence-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-align: center;
+  width: fit-content;
+}
+
+.confidence-badge.high {
+  background: #d4edda;
+  color: #155724;
+}
+
+.confidence-badge.moderate {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.confidence-badge.low {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+/* Recommendation Section */
+.recommendation {
+  padding: 12px;
+  background: #e3f2fd;
+  border-radius: 6px;
+  border-left: 3px solid #2196f3;
+}
+
+.recommendation .label {
+  font-size: 12px;
+  color: #0d47a1;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin: 0 0 6px 0;
+}
+
+.recommendation .value {
+  margin: 0;
+  font-size: 14px;
+  color: #1565c0;
+  line-height: 1.4;
+}
+
+/* SHAP Drivers Section */
+.shap-drivers {
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.drivers-header {
+  padding: 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s;
+}
+
+.drivers-header:hover {
+  background: #eeeeee;
+}
+
+.drivers-header .label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+}
+
+.toggle {
+  display: inline-block;
+  color: #666;
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.toggle.open {
+  transform: rotate(-180deg);
+}
+
+.drivers-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.driver-item {
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.driver-item:last-child {
+  border-bottom: none;
+}
+
+.driver-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.feature-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 13px;
+  flex: 1;
+}
+
+.impact-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.impact-badge.critical {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+.impact-badge.high {
+  background: #ffe0b2;
+  color: #e65100;
+}
+
+.impact-badge.moderate {
+  background: #fff9c4;
+  color: #f57f17;
+}
+
+.impact-badge.low {
+  background: #c8e6c9;
+  color: #1b5e20;
+}
+
+.driver-details {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.driver-details .value {
+  font-weight: 600;
+  color: #555;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.driver-details .contribution {
+  flex: 1;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.driver-details .contribution.increases {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.driver-details .contribution.decreases {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.driver-details .shap-value {
+  font-family: 'Monaco', 'Courier New', monospace;
+  color: #666;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* Comparison Info */
+.comparison-info {
+  padding: 8px 12px;
+  background: #f0f4f8;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #555;
+}
+
+/* Card Footer */
+.card-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.refresh-btn,
+.retry-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #fff;
+  color: #333;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover,
+.retry-btn:hover {
+  background: #f5f5f5;
+  border-color: #999;
+}
+
+.refresh-btn:active,
+.retry-btn:active {
+  transform: scale(0.98);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .risk-display {
+    grid-template-columns: 1fr;
+  }
+
+  .card-header h3 {
+    font-size: 14px;
+  }
+
+  .model-badge {
+    margin-left: 8px;
+  }
+
+  .drivers-list {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+}
