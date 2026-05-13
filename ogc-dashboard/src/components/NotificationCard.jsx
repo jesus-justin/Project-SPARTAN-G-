@@ -35,9 +35,14 @@ export default function NotificationCard({ notification, onAcknowledge }) {
 
       <div style={{ display: 'flex', gap: 10 }}>
         {isCrisis ? (
-          <Link to={`/students/${displayId}`} state={{ notification }}>
-            View Details
-          </Link>
+          <>
+            <Link to={`/students/${displayId}`} state={{ notification }}>
+              View Details
+            </Link>
+            <Link to="/case-mapping" state={{ caseId: displayId }}>
+              Reveal SR
+            </Link>
+          </>
         ) : (
           <span style={{ color: '#777' }}>View Details available only for Crisis cases</span>
         )}

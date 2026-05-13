@@ -26,7 +26,12 @@ export default function Navbar() {
         <Link to="/dashboard" style={{ color: '#fff' }}>Dashboard</Link>
         <Link to="/dass21" style={{ color: '#fff' }}>DASS-21</Link>
         <Link to="/esm" style={{ color: '#fff' }}>ESM</Link>
-        <span style={{ opacity: 0.9 }}>{user?.first_name || user?.firstName || 'Student'}</span>
+        <span style={{ opacity: 0.9 }}>
+          {user?.first_name || user?.firstName || 'Student'}
+          {user?.studentId || user?.student_id ? (
+            <span style={{ marginLeft: 8, fontSize: 12, opacity: 0.85 }}>({user?.studentId || user?.student_id})</span>
+          ) : null}
+        </span>
         <button onClick={handleLogout} style={{ border: 0, borderRadius: 8, padding: '6px 10px' }}>
           Logout
         </button>

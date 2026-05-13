@@ -174,6 +174,9 @@ export default function OgcDashboardPage() {
           <button onClick={() => navigate('/analytics')} style={{ padding: '8px 16px', background: '#1976d2', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 500 }}>
             📊 Analytics
           </button>
+          <button onClick={() => navigate('/case-mapping')} style={{ padding: '8px 16px', background: '#6a1b9a', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', fontWeight: 500 }}>
+            🔎 Case Mapping
+          </button>
           <UnreadBadge count={unreadCount} />
           <button onClick={logout}>Logout</button>
         </div>

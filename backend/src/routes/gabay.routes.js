@@ -5,6 +5,8 @@ import {
   getNotifications,
   acknowledgeNotification,
   getStudentDetail,
+  // new
+  getCaseMapping,
   createAppointment,
   updateAppointmentStatus,
   getAppointments,
@@ -20,6 +22,9 @@ router.get('/population-dashboard', getPopulationDashboard);
 // Notifications endpoints
 router.get('/notifications', getNotifications);
 router.patch('/notifications/:id/acknowledge', acknowledgeNotification);
+
+// Case mapping: resolve pseudonymous caseId -> SR code (Crisis-only)
+router.get('/case-mapping/:caseId', getCaseMapping);
 
 // Student details
 router.get('/students/:id', getStudentDetail);

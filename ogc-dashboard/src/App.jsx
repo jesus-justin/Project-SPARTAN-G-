@@ -6,6 +6,7 @@ import StudentDetailPage from './pages/StudentDetailPage';
 import GinhawaManagePage from './pages/GinhawaManagePage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import PredictiveAnalyticsPage from './pages/PredictiveAnalyticsPage';
+import CaseMappingPage from './pages/CaseMappingPage';
 import { useFacilitatorAuth } from './context/FacilitatorAuthContext';
 
 export default function App() {
@@ -52,6 +53,14 @@ export default function App() {
           element={
             <FacilitatorProtectedRoute>
               <PredictiveAnalyticsPage />
+            </FacilitatorProtectedRoute>
+          }
+        />
+        <Route
+          path="/case-mapping"
+          element={
+            <FacilitatorProtectedRoute>
+              <CaseMappingPage />
             </FacilitatorProtectedRoute>
           }
         />

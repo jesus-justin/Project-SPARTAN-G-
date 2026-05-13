@@ -616,6 +616,63 @@ export async function getStudentDetail(req, res, next) {
   }
 }
 
+export async function getCaseMapping(req, res, next) {
+  try {
+    if (req.user.role !== 'facilitator') {
+      return res.status(403).json({ success: false, message: 'Facilitator access required' });
+    }
+
+    const { caseId } = req.params;
+
+    if (!caseId) {
+      return res.status(400).json({ success: false, message: 'caseId required' });
+    }
+
+    // Lookup notification by constructed caseId
+    const notificationResult = await query(
+      `SELECT id, student_id FROM ogc_notifications
+       WHERE CONCAT('CASE-', YEAR(created_at), '-', LPAD(id, 3, '0')) = $1
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [caseId]
+    );
+
+    if (notificationResult.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+
+    const notif = notificationResult.rows[0];
+
+    // Get latest risk for that student
+    const riskRes = await query(
+      `SELECT risk_level FROM risk_classifications WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
+      [notif.student_id]
+    );
+
+    const riskLevel = riskRes.rowCount > 0 ? String(riskRes.rows[0].risk_level) : null;
+
+    // Only allow SR-code reveal for Crisis cases
+    if (riskLevel !== 'Crisis') {
+      return res.status(403).json({ success: false, message: 'SR-code reveal only allowed for Crisis cases' });
+    }
+
+    const userRes = await query(
+      `SELECT student_id FROM users WHERE id = $1 LIMIT 1`,
+      [notif.student_id]
+    );
+
+    if (userRes.rowCount === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    const srCode = userRes.rows[0].student_id;
+
+    return res.json({ success: true, data: { caseId, srCode } });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 export async function createAppointment(req, res, next) {
   try {
     // Check if user is facilitator
